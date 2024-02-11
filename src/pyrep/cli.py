@@ -36,8 +36,10 @@ def parse_args(args: Sequence[str]):
     arguments.add_argument(
         "-t",
         "--test",
-        help="the relative path to the directory/file containing the unit tests (Default: /tests). "
-        "If --failing and --passing are specified, this will be ignored",
+        default=Path("tests"),
+        help="the relative path to the directory/file containing the unit tests (Default: /tests). Can also be test "
+        "cases, separated by path separators (unix: ':', windows: ';'). If --failing and --passing are specified, "
+        "this will be ignored",
     )
     arguments.add_argument(
         "-o",
