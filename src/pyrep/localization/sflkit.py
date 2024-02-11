@@ -44,7 +44,9 @@ class SFLKitLocalization(Localization):
             include='"' + '","'.join(included_files) + '"',
             exclude='"' + '","'.join(excluded_files) + '"',
         )
-        self.analyzer = sflkit.Analyzer(self.config.failing, self.config.passing, self.config.factory)
+        self.analyzer = sflkit.Analyzer(
+            self.config.failing, self.config.passing, self.config.factory
+        )
 
     @staticmethod
     def get_events_path(
