@@ -1,2 +1,6 @@
 sflkit>=0.2.15
 sflkitlib>=0.0.3
+pytest>=8.0.1
+pytest-cov>=4.1.0
+pytest-json-report>=1.5.0
+coverage>=7.4.2
