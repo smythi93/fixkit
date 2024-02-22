@@ -1,4 +1,4 @@
-from pyrep.mode.repair import Repair
+from pyrep.repair.repair import Repair
 
 
 class Engine:

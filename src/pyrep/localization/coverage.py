@@ -5,9 +5,7 @@ import shutil
 import subprocess
 from typing import Optional, List, Dict
 
-import coverage
-from sflkit.analysis.spectra import Line, Spectrum
-from sflkitlib.events.event import LineEvent
+from sflkit.analysis.spectra import Spectrum
 
 from pyrep.localization import Localization, WeightedLocation
 

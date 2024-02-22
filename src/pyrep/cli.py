@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from pyrep.mode import Mode
+from pyrep.repair import Mode
 
 
 def parse_args(args: Sequence[str]):
@@ -14,8 +14,8 @@ def parse_args(args: Sequence[str]):
 
     arguments.add_argument(
         "-m",
-        "--mode",
-        help="the repair mode/technique (Default: pyGenProg)",
+        "--repair",
+        help="the repair repair/technique (Default: pyGenProg)",
         default="pyGenProg",
     )
     arguments.add_argument(
