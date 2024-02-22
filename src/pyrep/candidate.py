@@ -1,12 +1,19 @@
+import ast
 import os
-from typing import List
+from typing import Dict, Iterable
 
 
 class Candidate:
     def __init__(
-        self, location, files: List[os.PathLike], gen: int = 0, fitness: float = 0.0
+        self,
+        src: os.PathLike,
+        files: Iterable[os.PathLike] | Dict[os.PathLike, ast.AST],
+        gen: int = 0,
+        fitness: float = 0.0,
     ):
-        self.location = location
+        self.src = src
         self.gen = gen
         self.fitness = fitness
-        self.trees = {file: None for file in files}
+        self.trees = (
+            files if isinstance(files, Dict) else {file: None for file in files}
+        )
