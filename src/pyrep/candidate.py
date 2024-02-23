@@ -2,7 +2,7 @@ import ast
 import os
 from typing import Dict, Iterable, Optional, List
 
-from pyrep.mutation.operators import MutationOperator
+from pyrep.genetic.operators import MutationOperator
 
 
 class Candidate:

@@ -5,7 +5,7 @@ import os
 import random
 from typing import List
 
-from pyrep.mutation import IdentifierRemover
+from pyrep.genetic import IdentifierRemover
 
 
 class MutationOperator(abc.ABC, ast.NodeTransformer):
