@@ -3,22 +3,25 @@ import ast
 import copy
 import os
 import random
-from typing import List
+from typing import List, Dict, Optional
 
-from pyrep.genetic import IdentifierRemover
+
+class IdentifierRemover(ast.NodeVisitor):
+    def generic_visit(self, node):
+        if hasattr(node, "identifier"):
+            delattr(node, "identifier")
+        return super().generic_visit(node)
 
 
 class MutationOperator(abc.ABC, ast.NodeTransformer):
     def __init__(
-        self, statement: ast.AST, file: os.PathLike, statements: List[ast.AST]
+        self, identifier: int, file: os.PathLike, choices: Optional[List[int]] = None
     ):
-        if not hasattr(statement, "identifier"):
-            raise ValueError("Target statement must have an identifier")
-        self.statement = statement
-        self.identifier = getattr(statement, "identifier")
+        self.identifier = identifier
         self.file = file
-        self.statements = statements
+        self.choices = choices or list()
         self.identifier_remover = IdentifierRemover()
+        self.statements: Dict[int, ast.AST] = dict()
 
     def generic_visit(self, node: ast.AST):
         if (
@@ -26,6 +29,7 @@ class MutationOperator(abc.ABC, ast.NodeTransformer):
             and getattr(node, "identifier") == self.identifier
         ):
             return self.op()
+        node = copy.copy(node)
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
                 new_values = []
@@ -38,7 +42,7 @@ class MutationOperator(abc.ABC, ast.NodeTransformer):
                             new_values.extend(value)
                             continue
                     new_values.append(value)
-                old_value[:] = new_values
+                setattr(node, field, new_values)
             elif isinstance(old_value, ast.AST):
                 new_node = self.visit(old_value)
                 if new_node is None:
@@ -47,7 +51,8 @@ class MutationOperator(abc.ABC, ast.NodeTransformer):
                     setattr(node, field, new_node)
         return node
 
-    def mutate(self, tree: ast.AST) -> ast.AST:
+    def mutate(self, tree: ast.AST, statements: Dict[int, ast.AST]) -> ast.AST:
+        self.statements = statements
         return self.visit(tree)
 
     @abc.abstractmethod
@@ -59,48 +64,59 @@ class MutationOperator(abc.ABC, ast.NodeTransformer):
 
 
 class Delete(MutationOperator):
+    def __init__(
+        self, identifier: int, file: os.PathLike, choices: Optional[List[int]] = None
+    ):
+        super().__init__(identifier, file, choices)
+        self.pass_stmt = ast.Pass()
+        self.pass_stmt.identifier = self.identifier
+
     def op(self) -> ast.AST:
-        return ast.Pass()
+        self.statements[self.identifier] = self.pass_stmt
+        return self.pass_stmt
 
 
 class SelectionMutationOperator(MutationOperator, abc.ABC):
-    def __init__(
-        self, statement: ast.AST, file: int, statements: List[ast.AST], deepcopy=True
-    ):
-        super().__init__(statement, file, statements)
-        self.selection = random.choice(self.statements)
-        self.selection_identifier = self.selection.identifier
-        if deepcopy:
-            self.selection = copy.deepcopy(self.selection)
-            self.remove_identifier(self.selection)
+    def __init__(self, identifier: int, file: os.PathLike, choices: List[int]):
+        super().__init__(identifier, file, choices)
+        self.selection_identifier = random.choice(self.choices)
 
 
 class Insert(SelectionMutationOperator, abc.ABC):
     def op(self) -> ast.AST:
-        return self.insert()
+        selection = copy.deepcopy(self.statements[self.selection_identifier])
+        self.remove_identifier(selection)
+        return self.insert(selection)
 
     @abc.abstractmethod
-    def insert(self) -> ast.AST:
+    def insert(self, selection: ast.AST) -> ast.AST:
         pass
 
 
 class InsertBefore(Insert):
-    def insert(self) -> ast.AST:
-        return ast.Module(body=[self.selection, self.statement])
+    def insert(self, selection: ast.AST) -> ast.AST:
+        return ast.Module(
+            body=[selection, self.statements[self.identifier]], type_ignores=[]
+        )
 
 
 class InsertAfter(Insert):
-    def insert(self) -> ast.AST:
-        return ast.Module(body=[self.statement, self.selection])
+    def insert(self, selection: ast.AST) -> ast.AST:
+        return ast.Module(
+            body=[self.statements[self.identifier], selection], type_ignores=[]
+        )
 
 
 class Replace(SelectionMutationOperator):
     def __init__(self, statement: ast.AST, file: int, statements: List[ast.AST]):
         super().__init__(statement, file, statements)
-        self.selection.identifier = self.identifier
 
     def op(self) -> ast.AST:
-        return self.selection
+        selection = copy.deepcopy(self.statements[self.selection_identifier])
+        self.remove_identifier(selection)
+        selection.identifier = self.identifier
+        self.statements[self.identifier] = selection
+        return selection
 
 
 class OtherMutationOperator(SelectionMutationOperator, abc.ABC):
@@ -124,33 +140,49 @@ class Move(OtherMutationOperator, abc.ABC):
 
 class MoveBefore(Move):
     def op_other(self) -> ast.AST:
-        return ast.Module(body=[self.statement, self.selection])
+        return ast.Module(
+            body=[
+                self.statements[self.identifier],
+                self.statements[self.selection_identifier],
+            ],
+            type_ignores=[],
+        )
 
 
 class MoveAfter(Move):
     def op_other(self) -> ast.AST:
-        return ast.Module(body=[self.selection, self.statement])
+        return ast.Module(
+            body=[
+                self.statements[self.selection_identifier],
+                self.statements[self.identifier],
+            ],
+            type_ignores=[],
+        )
 
 
 class Swap(OtherMutationOperator):
-    def __init__(self, statement: ast.AST, file: int, statements: List[ast.AST]):
-        super().__init__(statement, file, statements, deepcopy=False)
+    def __init__(self, statement: ast.AST, file: int, choices: List[ast.AST]):
+        super().__init__(statement, file, choices)
 
     def op(self) -> ast.AST:
-        return self.selection
+        return self.statements[self.selection_identifier]
 
     def op_other(self) -> ast.AST:
-        return self.statement
+        return self.statements[self.identifier]
 
 
 class Copy(MutationOperator):
-    def __init__(self, statement: ast.AST, file: int, statements: List[ast.AST]):
-        super().__init__(statement, file, statements)
-        self.copy = copy.deepcopy(self.statement)
-        self.remove_identifier(self.copy)
+    def __init__(
+        self, statement: ast.AST, file: int, choices: Optional[List[int]] = None
+    ):
+        super().__init__(statement, file, choices)
 
     def op(self) -> ast.AST:
-        return ast.Module(body=[self.statement, self.copy])
+        copied_stmt = copy.deepcopy(self.statements[self.identifier])
+        self.remove_identifier(copied_stmt)
+        return ast.Module(
+            body=[self.statements[self.identifier], copied_stmt], type_ignores=[]
+        )
 
 
 class ReplaceOperand(MutationOperator):
