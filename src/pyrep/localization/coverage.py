@@ -30,8 +30,8 @@ class CoverageLocalization(Localization):
 
     def run_preparation(self):
         shutil.copytree(self.src, self.out, dirs_exist_ok=True)
-        passing_failing = (self.passing or list()) + (self.failing or list())
-        tests = passing_failing or self.tests or ["tests"]
+        passing_failing = (self.passing or set()) | (self.failing or set())
+        tests = list(passing_failing or self.tests or {"tests"})
         subprocess.run(
             [
                 "python",
@@ -49,15 +49,15 @@ class CoverageLocalization(Localization):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        passing = set()
-        failing = set()
+        self.passing = set()
+        self.failing = set()
         with open(self.out / ".report.json") as fp:
             results = json.load(fp)
         for result in results["tests"]:
             if result["outcome"] == "passed":
-                passing.add(result["nodeid"])
+                self.passing.add(result["nodeid"])
             else:
-                failing.add(result["nodeid"])
+                self.failing.add(result["nodeid"])
         subprocess.run(
             ["coverage", "json", "-o", "tmp.json", "--show-context"],
             cwd=self.out,
@@ -74,11 +74,11 @@ class CoverageLocalization(Localization):
                     match = CONTEXT_PATTERN.match(test)
                     if match:
                         test = match.group("test")
-                        if test in passing:
+                        if test in self.passing:
                             po += 1
-                        elif test in failing:
+                        elif test in self.failing:
                             fo += 1
-                pn, fn = len(passing) - po, len(failing) - fo
+                pn, fn = len(self.passing) - po, len(self.failing) - fo
                 self.spectra.append(Spectrum(file, line, po, pn, fo, fn))
 
     def get_suggestions(self):

@@ -69,15 +69,18 @@ class SFLKitLocalization(Localization):
 
     def run_preparation(self):
         sflkit.instrument_config(self.config)
-        passing_failing = (self.passing or list()) + (self.failing or list())
-        tests = passing_failing or self.tests or Path("tests")
-        sflkit.runners.PytestRunner().run(
+        passing_failing = (self.passing or set()) | (self.failing or set())
+        tests = passing_failing or self.tests or {"tests"}
+        runner = sflkit.runners.PytestRunner()
+        runner.run(
             directory=self.out,
             output=self.get_events_path(events_path=self.events_path),
-            files=tests,
+            files=list(tests),
             base=self.test_base,
             environ=self.env,
         )
+        self.passing = set(runner.passing_tests)
+        self.failing = set(runner.failing_tests)
         self.config = self.get_config()
         self.analyzer = sflkit.Analyzer(
             self.config.failing, self.config.passing, self.config.factory

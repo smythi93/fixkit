@@ -4,6 +4,7 @@ from pathlib import Path
 from pyrep.localization import Localization
 from pyrep.localization.coverage import CoverageLocalization
 from pyrep.localization.sflkit import SFLKitLocalization
+from utils import SUBJECTS
 
 
 class TestLocalization(unittest.TestCase):
@@ -20,7 +21,7 @@ class TestLocalization(unittest.TestCase):
     def test_sflkit_localization(self):
         self._base_test(
             SFLKitLocalization(
-                Path("tests", "resources", "middle"),
+                SUBJECTS / "middle",
                 events=["line"],
                 predicates=["line"],
                 metric="Ochiai",
@@ -32,7 +33,7 @@ class TestLocalization(unittest.TestCase):
     def test_coverage_localization(self):
         self._base_test(
             CoverageLocalization(
-                Path("tests", "resources", "middle"),
+                SUBJECTS / "middle",
                 cov="middle",
                 metric="Ochiai",
                 tests=["tests.py"],
