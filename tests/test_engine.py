@@ -1,12 +1,16 @@
+import shutil
 import unittest
 
 from pyrep.candidate import GeneticCandidate
 from pyrep.fitness.engine import Engine
 from pyrep.fitness.metric import GenProgFitness
-from utils import SUBJECTS
+from utils import SUBJECTS, REP
 
 
 class TestEngine(unittest.TestCase):
+    def tearDown(self):
+        shutil.rmtree(REP, ignore_errors=True)
+
     def run_test(self, workers: int):
         fitness = GenProgFitness(
             {

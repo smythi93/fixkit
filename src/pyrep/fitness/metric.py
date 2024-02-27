@@ -7,38 +7,43 @@ from typing import Set, Dict, Optional, Tuple
 
 
 class Fitness(abc.ABC):
-    def __init__(self, passing: Set[str], failing: Set[str]):
+    def __init__(self, passing: Set[str], failing: Set[str], timeout: int = 10):
         self.passing = passing
         self.failing = failing
+        self.timeout = timeout
 
     def run(
         self, cwd: os.PathLike, env: Optional[Dict[str, str]] = None
     ) -> Tuple[Set[str], Set[str]]:
         tests = list(self.passing | self.failing)
-        subprocess.run(
-            [
-                "python",
-                "-m",
-                "pytest",
-                "--json-report",
-            ]
-            + tests,
-            cwd=cwd,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        passing = set()
-        failing = set()
-        cwd = Path(cwd)
-        with open(cwd / ".report.json") as fp:
-            results = json.load(fp)
-        for result in results["tests"]:
-            if result["outcome"] == "passed":
-                passing.add(result["nodeid"])
-            else:
-                failing.add(result["nodeid"])
-        return passing, failing
+        try:
+            subprocess.run(
+                [
+                    "python",
+                    "-m",
+                    "pytest",
+                    "--json-report",
+                ]
+                + tests,
+                cwd=cwd,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=self.timeout,
+            )
+            passing = set()
+            failing = set()
+            cwd = Path(cwd)
+            with open(cwd / ".report.json") as fp:
+                results = json.load(fp)
+            for result in results["tests"]:
+                if result["outcome"] == "passed":
+                    passing.add(result["nodeid"])
+                else:
+                    failing.add(result["nodeid"])
+            return passing, failing
+        except subprocess.TimeoutExpired:
+            return set(), set()
 
     @abc.abstractmethod
     def fitness(self, cwd: os.PathLike, env: Optional[Dict[str, str]] = None) -> float:

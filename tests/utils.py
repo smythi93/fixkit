@@ -1,5 +1,7 @@
 from pathlib import Path
 
-SUBJECTS = Path(__file__).parent / "resources"
-REP = Path(__file__).parent / "rep"
+BASE = Path(__file__).parent
+SUBJECTS = BASE / "resources"
+REP = BASE / "rep"
+SFL = BASE / "sflkit_events"
 LOCALIZATION = REP / "localization"

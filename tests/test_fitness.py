@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from pyrep.fitness.metric import GenProgFitness
@@ -5,6 +6,12 @@ from utils import SUBJECTS
 
 
 class TestFitness(unittest.TestCase):
+    def tearDown(self):
+        try:
+            os.remove(SUBJECTS / "middle" / ".report.json")
+        except OSError:
+            pass
+
     def test_gen_prog_fittness(self):
         fitness = GenProgFitness(
             {
