@@ -1,7 +1,7 @@
 import unittest
 
-from pyrep.fitness import GenProgFitness
-from utils import LOCALIZATION
+from pyrep.fitness.metric import GenProgFitness
+from utils import SUBJECTS
 
 
 class TestFitness(unittest.TestCase):
@@ -18,4 +18,4 @@ class TestFitness(unittest.TestCase):
             1,
             10,
         )
-        self.assertAlmostEqual(5, fitness.fitness(LOCALIZATION), delta=0.000001)
+        self.assertAlmostEqual(5, fitness.fitness(SUBJECTS / "middle"), delta=0.000001)
