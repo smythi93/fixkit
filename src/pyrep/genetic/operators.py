@@ -1,34 +1,212 @@
 import abc
 import ast
 import copy
-import os
 import random
 from typing import List, Dict, Optional
 
 
-class IdentifierRemover(ast.NodeVisitor):
-    def generic_visit(self, node):
-        if hasattr(node, "identifier"):
-            delattr(node, "identifier")
-        return super().generic_visit(node)
-
-
-class MutationOperator(abc.ABC, ast.NodeTransformer):
-    def __init__(
-        self, identifier: int, file: os.PathLike, choices: Optional[List[int]] = None
-    ):
+class MutationOperator(abc.ABC):
+    def __init__(self, identifier: int, choices: Optional[List[int]] = None):
         self.identifier = identifier
-        self.file = file
         self.choices = choices or list()
-        self.identifier_remover = IdentifierRemover()
-        self.statements: Dict[int, ast.AST] = dict()
 
-    def generic_visit(self, node: ast.AST):
-        if (
-            hasattr(node, "identifier")
-            and getattr(node, "identifier") == self.identifier
-        ):
-            return self.op()
+    @abc.abstractmethod
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        pass
+
+
+class Delete(MutationOperator):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        mutations[self.identifier] = ast.Pass()
+
+
+class SelectionMutationOperator(MutationOperator, abc.ABC):
+    def __init__(self, identifier: int, choices: List[int]):
+        super().__init__(identifier, choices)
+        self.selection_identifier = random.choice(self.choices)
+
+
+class Insert(SelectionMutationOperator, abc.ABC):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        mutations[self.identifier] = self.insert(
+            mutations.get(self.identifier, statements[self.identifier]),
+            mutations.get(
+                self.selection_identifier, statements[self.selection_identifier]
+            ),
+        )
+
+    @abc.abstractmethod
+    def insert(self, tree: ast.AST, selection: ast.AST) -> ast.AST:
+        pass
+
+
+class InsertBefore(Insert):
+    def insert(self, tree: ast.AST, selection: ast.AST) -> ast.AST:
+        return ast.Module(body=[selection, tree], type_ignores=[])
+
+
+class InsertAfter(Insert):
+    def insert(self, tree: ast.AST, selection: ast.AST) -> ast.AST:
+        return ast.Module(body=[tree, selection], type_ignores=[])
+
+
+class Replace(SelectionMutationOperator):
+    def __init__(self, statement: ast.AST, statements: List[ast.AST]):
+        super().__init__(statement, statements)
+
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        mutations[self.identifier] = mutations.get(
+            self.selection_identifier, statements[self.selection_identifier]
+        )
+
+
+class OtherMutationOperator(SelectionMutationOperator, abc.ABC):
+    @abc.abstractmethod
+    def mutate_this(
+        self,
+        mutations: Dict[int, ast.AST],
+        statements: Dict[int, ast.AST],
+        this: ast.AST,
+        other: ast.AST,
+    ):
+        pass
+
+    @abc.abstractmethod
+    def mutate_other(
+        self,
+        mutations: Dict[int, ast.AST],
+        statements: Dict[int, ast.AST],
+        this: ast.AST,
+        other: ast.AST,
+    ):
+        pass
+
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        this = mutations.get(self.identifier, statements[self.identifier])
+        other = mutations.get(
+            self.selection_identifier, statements[self.selection_identifier]
+        )
+        self.mutate_this(mutations, statements, this, other)
+        self.mutate_other(mutations, statements, this, other)
+
+
+class Move(OtherMutationOperator, abc.ABC):
+    def mutate_this(
+        self,
+        mutations: Dict[int, ast.AST],
+        statements: Dict[int, ast.AST],
+        this: ast.AST,
+        other: ast.AST,
+    ):
+        mutations[self.identifier] = ast.Pass()
+
+
+class MoveBefore(Move):
+    def mutate_other(
+        self,
+        mutations: Dict[int, ast.AST],
+        statements: Dict[int, ast.AST],
+        this: ast.AST,
+        other: ast.AST,
+    ):
+        mutations[self.selection_identifier] = ast.Module(
+            body=[
+                this,
+                other,
+            ],
+            type_ignores=[],
+        )
+
+
+class MoveAfter(Move):
+    def mutate_other(
+        self,
+        mutations: Dict[int, ast.AST],
+        statements: Dict[int, ast.AST],
+        this: ast.AST,
+        other: ast.AST,
+    ):
+        mutations[self.selection_identifier] = ast.Module(
+            body=[
+                other,
+                this,
+            ],
+            type_ignores=[],
+        )
+
+
+class Swap(OtherMutationOperator):
+    def mutate_this(
+        self,
+        mutations: Dict[int, ast.AST],
+        statements: Dict[int, ast.AST],
+        this: ast.AST,
+        other: ast.AST,
+    ):
+        mutations[self.identifier] = other
+
+    def mutate_other(
+        self,
+        mutations: Dict[int, ast.AST],
+        statements: Dict[int, ast.AST],
+        this: ast.AST,
+        other: ast.AST,
+    ):
+        mutations[self.selection_identifier] = this
+
+
+class Copy(MutationOperator):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        mutations[self.identifier] = ast.Module(
+            body=[statement, statement],
+            type_ignores=[],
+        )
+
+
+class ReplaceOperand(MutationOperator):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        pass
+
+
+class ReplaceBinaryOperator(ReplaceOperand):
+    pass
+
+
+class ReplaceComparisonOperator(ReplaceOperand):
+    pass
+
+
+class ReplaceUnaryOperator(ReplaceOperand):
+    pass
+
+
+class ReplaceBooleanOperator(ReplaceOperand):
+    pass
+
+
+class Rename(MutationOperator):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        pass
+
+
+class Mutator(ast.NodeTransformer):
+    def __init__(
+        self, statements: Dict[int, ast.AST], mutations: List[MutationOperator]
+    ):
+        self.statements = statements
+        self.mutations = mutations
+        mutation_map = dict()
+        for m in self.mutations:
+            m.mutate(mutation_map, self.statements)
+        self.mutation_map = {
+            self.statements[identifier]: mutation_map[identifier]
+            for identifier in mutation_map
+        }
+
+    def generic_visit(self, node):
+        if node in self.mutation_map:
+            return self.mutation_map[node]
         node = copy.copy(node)
         for field, old_value in ast.iter_fields(node):
             if isinstance(old_value, list):
@@ -51,161 +229,5 @@ class MutationOperator(abc.ABC, ast.NodeTransformer):
                     setattr(node, field, new_node)
         return node
 
-    def mutate(self, tree: ast.AST, statements: Dict[int, ast.AST]) -> ast.AST:
-        self.statements = statements
+    def mutate(self, tree: ast.AST):
         return self.visit(tree)
-
-    @abc.abstractmethod
-    def op(self) -> ast.AST:
-        pass
-
-    def remove_identifier(self, node: ast.AST):
-        self.identifier_remover.visit(node)
-
-
-class Delete(MutationOperator):
-    def __init__(
-        self, identifier: int, file: os.PathLike, choices: Optional[List[int]] = None
-    ):
-        super().__init__(identifier, file, choices)
-        self.pass_stmt = ast.Pass()
-        self.pass_stmt.identifier = self.identifier
-
-    def op(self) -> ast.AST:
-        self.statements[self.identifier] = self.pass_stmt
-        return self.pass_stmt
-
-
-class SelectionMutationOperator(MutationOperator, abc.ABC):
-    def __init__(self, identifier: int, file: os.PathLike, choices: List[int]):
-        super().__init__(identifier, file, choices)
-        self.selection_identifier = random.choice(self.choices)
-
-
-class Insert(SelectionMutationOperator, abc.ABC):
-    def op(self) -> ast.AST:
-        selection = copy.deepcopy(self.statements[self.selection_identifier])
-        self.remove_identifier(selection)
-        return self.insert(selection)
-
-    @abc.abstractmethod
-    def insert(self, selection: ast.AST) -> ast.AST:
-        pass
-
-
-class InsertBefore(Insert):
-    def insert(self, selection: ast.AST) -> ast.AST:
-        return ast.Module(
-            body=[selection, self.statements[self.identifier]], type_ignores=[]
-        )
-
-
-class InsertAfter(Insert):
-    def insert(self, selection: ast.AST) -> ast.AST:
-        return ast.Module(
-            body=[self.statements[self.identifier], selection], type_ignores=[]
-        )
-
-
-class Replace(SelectionMutationOperator):
-    def __init__(self, statement: ast.AST, file: int, statements: List[ast.AST]):
-        super().__init__(statement, file, statements)
-
-    def op(self) -> ast.AST:
-        selection = copy.deepcopy(self.statements[self.selection_identifier])
-        self.remove_identifier(selection)
-        selection.identifier = self.identifier
-        self.statements[self.identifier] = selection
-        return selection
-
-
-class OtherMutationOperator(SelectionMutationOperator, abc.ABC):
-    def generic_visit(self, node):
-        if (
-            hasattr(node, "identifier")
-            and getattr(node, "identifier") == self.selection_identifier
-        ):
-            return self.op_other()
-        return super().generic_visit(node)
-
-    @abc.abstractmethod
-    def op_other(self) -> ast.AST:
-        pass
-
-
-class Move(OtherMutationOperator, abc.ABC):
-    def op(self) -> ast.AST:
-        return ast.Pass()
-
-
-class MoveBefore(Move):
-    def op_other(self) -> ast.AST:
-        return ast.Module(
-            body=[
-                self.statements[self.identifier],
-                self.statements[self.selection_identifier],
-            ],
-            type_ignores=[],
-        )
-
-
-class MoveAfter(Move):
-    def op_other(self) -> ast.AST:
-        return ast.Module(
-            body=[
-                self.statements[self.selection_identifier],
-                self.statements[self.identifier],
-            ],
-            type_ignores=[],
-        )
-
-
-class Swap(OtherMutationOperator):
-    def __init__(self, statement: ast.AST, file: int, choices: List[ast.AST]):
-        super().__init__(statement, file, choices)
-
-    def op(self) -> ast.AST:
-        return self.statements[self.selection_identifier]
-
-    def op_other(self) -> ast.AST:
-        return self.statements[self.identifier]
-
-
-class Copy(MutationOperator):
-    def __init__(
-        self, statement: ast.AST, file: int, choices: Optional[List[int]] = None
-    ):
-        super().__init__(statement, file, choices)
-
-    def op(self) -> ast.AST:
-        copied_stmt = copy.deepcopy(self.statements[self.identifier])
-        self.remove_identifier(copied_stmt)
-        return ast.Module(
-            body=[self.statements[self.identifier], copied_stmt], type_ignores=[]
-        )
-
-
-class ReplaceOperand(MutationOperator):
-    def op(self) -> ast.AST:
-        pass
-
-
-class ReplaceBinaryOperator(ReplaceOperand):
-    pass
-
-
-class ReplaceComparisonOperator(ReplaceOperand):
-    pass
-
-
-class ReplaceUnaryOperator(ReplaceOperand):
-    pass
-
-
-class ReplaceBooleanOperator(ReplaceOperand):
-    pass
-
-
-class Rename(MutationOperator):
-    def op(self) -> ast.AST:
-        pass

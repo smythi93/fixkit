@@ -1,18 +1,21 @@
 import unittest
 
 from pyrep.fitness import GenProgFitness
-from pyrep.localization.coverage import CoverageLocalization
-from utils import SUBJECTS
+from utils import LOCALIZATION
 
 
 class TestFitness(unittest.TestCase):
     def test_gen_prog_fittness(self):
-        localization = CoverageLocalization(
-            SUBJECTS / "middle",
-            cov="middle",
-            metric="Ochiai",
-            tests=["tests.py"],
+        fitness = GenProgFitness(
+            {
+                "tests.py::MiddleTestCase::test_middle_123",
+                "tests.py::MiddleTestCase::test_middle_321",
+                "tests.py::MiddleTestCase::test_middle_335",
+                "tests.py::MiddleTestCase::test_middle_534",
+                "tests.py::MiddleTestCase::test_middle_555",
+            },
+            {"tests.py::MiddleTestCase::test_middle_213"},
+            1,
+            10,
         )
-        localization.prepare()
-        fitness = GenProgFitness(localization.passing, localization.failing, 1, 10)
-        self.assertAlmostEqual(5, fitness.fitness(SUBJECTS / "middle"), delta=0.000001)
+        self.assertAlmostEqual(5, fitness.fitness(LOCALIZATION), delta=0.000001)

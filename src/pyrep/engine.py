@@ -1,6 +1,8 @@
-from pyrep.repair.repair import Repair
+from pyrep.localization import Localization
+from pyrep.repair import Repair
 
 
 class Engine:
-    def __init__(self, repair: Repair):
+    def __init__(self, localization: Localization, repair: Repair):
+        self.localization = localization
         self.repair = repair

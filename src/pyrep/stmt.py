@@ -72,8 +72,7 @@ class StatementFinder(ast.NodeVisitor):
         :return: None
         """
         if isinstance(node, ast.stmt):
-            node.identifier = self.next_identifier()
-            self.statements[node.identifier] = node
+            self.statements[self.next_identifier()] = node
         return super().generic_visit(node)
 
     def next_identifier(self):
