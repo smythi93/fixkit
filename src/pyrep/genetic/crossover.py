@@ -2,27 +2,27 @@ import abc
 import random
 from typing import Optional, Tuple
 
-from pyrep.candidate import Candidate
+from pyrep.candidate import GeneticCandidate
 
 
 class Crossover(abc.ABC):
     @abc.abstractmethod
     def crossover(
-        self, parent_x: Candidate, parent_y: Candidate
-    ) -> Optional[Tuple[Candidate, Candidate]]:
+        self, parent_x: GeneticCandidate, parent_y: GeneticCandidate
+    ) -> Optional[Tuple[GeneticCandidate, GeneticCandidate]]:
         pass
 
 
 class OnePointCrossover(Crossover):
     def crossover(
-        self, parent_x: Candidate, parent_y: Candidate
-    ) -> Optional[Tuple[Candidate, Candidate]]:
+        self, parent_x: GeneticCandidate, parent_y: GeneticCandidate
+    ) -> Optional[Tuple[GeneticCandidate, GeneticCandidate]]:
         index_x = random.randint(0, len(parent_x))
         index_y = random.randint(0, len(parent_y))
 
         ax, bx = parent_x[:index_x], parent_x[index_x:]
         ay, by = parent_y[:index_y], parent_y[index_y:]
 
-        return Candidate(
+        return GeneticCandidate(
             parent_x.src, mutations=ax + by, gen=parent_x.gen + 1
-        ), Candidate(parent_y.src, mutations=ay + bx, gen=parent_y.gen + 1)
+        ), GeneticCandidate(parent_y.src, mutations=ay + bx, gen=parent_y.gen + 1)

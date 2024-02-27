@@ -4,7 +4,7 @@ import random
 import unittest
 from pathlib import Path
 
-from pyrep.candidate import Candidate
+from pyrep.candidate import GeneticCandidate
 from pyrep.genetic.crossover import OnePointCrossover
 from pyrep.genetic.operators import (
     Delete,
@@ -33,12 +33,12 @@ class TestGenetic(unittest.TestCase):
             fp.write("x = 1\ny = 2")
         cls.finder = StatementFinder(cls.file)
         cls.finder.search_source()
-        cls.candidate = cls.finder.build_candidate()
+        cls.candidate = GeneticCandidate.from_candidate(cls.finder.build_candidate())
         cls.statements = cls.finder.statements
         cls.statements[3] = ast.Assign(
             targets=[ast.Name(id="z")], value=ast.Num(n=3), lineno=3
         )
-        cls.tree = cls.candidate.TREES["."]
+        cls.tree = cls.candidate.trees["."]
 
     @classmethod
     def tearDownClass(cls):
@@ -186,8 +186,8 @@ class TestCrossover(TestGenetic):
         random.seed(seed)
         crossover = OnePointCrossover()
         cx, cy = crossover.crossover(px, py)
-        self.assertIsInstance(cx, Candidate)
-        self.assertIsInstance(cy, Candidate)
+        self.assertIsInstance(cx, GeneticCandidate)
+        self.assertIsInstance(cy, GeneticCandidate)
         return px, py, cx, cy
 
     def test_crossover_0(self):

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Set, Dict, Optional, Tuple
 
 
-class Fittness(abc.ABC):
+class Fitness(abc.ABC):
     def __init__(self, passing: Set[str], failing: Set[str]):
         self.passing = passing
         self.failing = failing
@@ -45,7 +45,7 @@ class Fittness(abc.ABC):
         pass
 
 
-class GenProgFitness(Fittness):
+class GenProgFitness(Fitness):
     def __init__(
         self,
         passing: Set[str],

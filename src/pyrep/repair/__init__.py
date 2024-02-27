@@ -2,6 +2,7 @@ import abc
 from typing import Collection, List
 
 from pyrep.candidate import Candidate
+from pyrep.fitness import Fitness
 from pyrep.localization import Localization, WeightedLocation
 
 
@@ -28,6 +29,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
     def __init__(
         self,
         initial_candidate: Candidate,
+        fitness: Fitness,
         population_size: int,
         max_generations: int,
         w_mut: float,

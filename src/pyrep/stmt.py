@@ -21,7 +21,9 @@ class StatementFinder(ast.NodeVisitor):
         self.statements: Dict[int, ast.AST] = dict()
         self.src = Path(src)
         self.trees = dict()
+        self.files = dict()
         self.searched = False
+        self.current_file = None
 
     def build_candidate(self) -> Candidate:
         """
@@ -31,7 +33,7 @@ class StatementFinder(ast.NodeVisitor):
         :raises SearchError: If the source has not been searched.
         """
         if self.searched:
-            return Candidate(self.src, files=self.trees)
+            return Candidate(self.src, trees=self.trees, files=self.files)
         else:
             raise SearchError("Source not searched")
 
@@ -63,6 +65,7 @@ class StatementFinder(ast.NodeVisitor):
                 source = f.read()
             tree = ast.parse(source)
             self.trees[file] = tree
+            self.current_file = file
             self.visit(tree)
 
     def generic_visit(self, node):
@@ -72,7 +75,9 @@ class StatementFinder(ast.NodeVisitor):
         :return: None
         """
         if isinstance(node, ast.stmt):
-            self.statements[self.next_identifier()] = node
+            identifier = self.next_identifier()
+            self.statements[identifier] = node
+            self.files[identifier] = self.current_file
         return super().generic_visit(node)
 
     def next_identifier(self):

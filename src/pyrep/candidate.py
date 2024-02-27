@@ -6,42 +6,64 @@ from pyrep.genetic.operators import MutationOperator
 
 
 class Candidate:
-    TREES: Dict[os.PathLike, ast.AST] = dict()
+    def __init__(
+        self,
+        src: os.PathLike,
+        trees: Iterable[os.PathLike] | Dict[os.PathLike, ast.AST] = None,
+        files: Dict[int, os.PathLike] = None,
+    ):
+        """
+        Initialize the class with the provided source path, generation number, fitness level, trees, and files.
+        :param src (os.PathLike): The source path.
+        :param gen (int, optional): The generation number. Defaults to 0.
+        :param fitness (float, optional): The fitness level. Defaults to 0.0.
+        :param trees (Iterable[os.PathLike] | Dict[os.PathLike, ast.AST], optional): Iterable of source paths or
+        dictionary of source paths and AST objects. Defaults to None.
+        :param files (Dict[int, os.PathLike], optional): Dictionary of file indices and source paths. Defaults to None.
+        """
+        self.src = src
+        if trees:
+            self.trees = (
+                trees if isinstance(trees, Dict) else {file: None for file in trees}
+            )
+        else:
+            self.trees = dict()
+        self.files = files or dict()
 
+    def clone(self):
+        """
+        Create a new Candidate object with the same properties as the current one.
+        """
+        return Candidate(self.src, self.trees, self.files)
+
+
+class GeneticCandidate(Candidate):
     def __init__(
         self,
         src: os.PathLike,
         mutations: Optional[List[MutationOperator]] = None,
         gen: int = 0,
         fitness: float = 0.0,
-        files: Iterable[os.PathLike] | Dict[os.PathLike, ast.AST] = None,
+        trees: Iterable[os.PathLike] | Dict[os.PathLike, ast.AST] = None,
+        files: Dict[int, os.PathLike] = None,
     ):
-        """
-        Initializes the class with the provided source path, optional files, generation number, and fitness value.
-        :param src: The source path (os.PathLike)
-        :param files: Optional files as an Iterable[os.PathLike] or Dict[os.PathLike, ast.AST]
-        :param mutations: Optional mutations as a List[MutationOperator]
-        :param gen: Generation number (int)
-        :param fitness: Fitness value (float)
-        """
-        self.src = src
+        super().__init__(src, trees, files)
+        self.mutations = mutations or list()
         self.gen = gen
         self.fitness = fitness
-        self.mutations = mutations or list()
-        if files:
-            self.TREES = (
-                files if isinstance(files, Dict) else {file: None for file in files}
-            )
+
+    @staticmethod
+    def from_candidate(candidate: Candidate):
+        return GeneticCandidate(
+            candidate.src, trees=candidate.trees, files=candidate.files
+        )
 
     def clone(self):
         """
-        Create a new Candidate object with the same properties as the current one.
+        Create a new GeneticCandidate object with the same properties as the current one.
         """
-        return Candidate(
-            self.src,
-            self.mutations,
-            self.gen,
-            self.fitness,
+        return GeneticCandidate(
+            self.src, self.mutations, self.gen, self.fitness, self.trees, self.files
         )
 
     def __len__(self):

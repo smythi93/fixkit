@@ -2,7 +2,10 @@ from pyrep.localization import Localization
 from pyrep.repair import Repair
 
 
+class Worker:
+    def __init__(self, identifier: str):
+        pass
+
+
 class Engine:
-    def __init__(self, localization: Localization, repair: Repair):
-        self.localization = localization
-        self.repair = repair
+    pass
