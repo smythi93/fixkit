@@ -9,6 +9,7 @@ class Candidate:
     def __init__(
         self,
         src: os.PathLike,
+        statements: Dict[int, ast.AST] = None,
         trees: Iterable[os.PathLike] | Dict[os.PathLike, ast.AST] = None,
         files: Dict[int, os.PathLike] = None,
     ):
@@ -22,6 +23,7 @@ class Candidate:
         :param files (Dict[int, os.PathLike], optional): Dictionary of file indices and source paths. Defaults to None.
         """
         self.src = src
+        self.statements = statements or dict()
         if trees:
             self.trees = (
                 trees if isinstance(trees, Dict) else {file: None for file in trees}
@@ -44,10 +46,11 @@ class GeneticCandidate(Candidate):
         mutations: Optional[List[MutationOperator]] = None,
         gen: int = 0,
         fitness: float = 0.0,
+        statements: Dict[int, ast.AST] = None,
         trees: Iterable[os.PathLike] | Dict[os.PathLike, ast.AST] = None,
         files: Dict[int, os.PathLike] = None,
     ):
-        super().__init__(src, trees, files)
+        super().__init__(src, statements, trees, files)
         self.mutations = mutations or list()
         self.gen = gen
         self.fitness = fitness

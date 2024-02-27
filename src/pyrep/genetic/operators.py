@@ -2,7 +2,7 @@ import abc
 import ast
 import copy
 import random
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 
 
 class MutationOperator(abc.ABC):
@@ -231,3 +231,6 @@ class Mutator(ast.NodeTransformer):
 
     def mutate(self, tree: ast.AST):
         return self.visit(tree)
+
+    def get_mutation_indices(self) -> Set[int]:
+        return set(self.mutation_map.keys())

@@ -33,7 +33,9 @@ class StatementFinder(ast.NodeVisitor):
         :raises SearchError: If the source has not been searched.
         """
         if self.searched:
-            return Candidate(self.src, trees=self.trees, files=self.files)
+            return Candidate(
+                self.src, statements=self.statements, trees=self.trees, files=self.files
+            )
         else:
             raise SearchError("Source not searched")
 
