@@ -1,7 +1,7 @@
 import ast
 import os
 from pathlib import Path
-from typing import Dict
+from typing import Dict, List
 
 from pyrep.candidate import Candidate
 
@@ -19,6 +19,7 @@ class StatementFinder(ast.NodeVisitor):
         """
         self.identifier = 0
         self.statements: Dict[int, ast.AST] = dict()
+        self.lines: Dict[str, Dict[int, List[int]]] = dict()
         self.src = Path(src)
         self.trees = dict()
         self.files = dict()
@@ -34,7 +35,11 @@ class StatementFinder(ast.NodeVisitor):
         """
         if self.searched:
             return Candidate(
-                self.src, statements=self.statements, trees=self.trees, files=self.files
+                self.src,
+                statements=self.statements,
+                trees=self.trees,
+                files=self.files,
+                lines=self.lines,
             )
         else:
             raise SearchError("Source not searched")
@@ -80,6 +85,11 @@ class StatementFinder(ast.NodeVisitor):
             identifier = self.next_identifier()
             self.statements[identifier] = node
             self.files[identifier] = self.current_file
+            if self.current_file not in self.lines:
+                self.lines[self.current_file] = dict()
+            if node.lineno not in self.lines[self.current_file]:
+                self.lines[self.current_file][node.lineno] = list()
+            self.lines[self.current_file][node.lineno].append(identifier)
         return super().generic_visit(node)
 
     def next_identifier(self):

@@ -2,7 +2,7 @@ import abc
 import math
 import os
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Callable
 
 from sflkit import Predicate
 from sflkit.analysis.suggestion import Location
@@ -10,10 +10,40 @@ from sflkit.analysis.suggestion import Location
 from pyrep.constants import DEFAULT_WORK_DIR
 
 
-class WeightedLocation(Location):
+class Weighted:
+    def __init__(self, weight: float):
+        self.weight = 0 if math.isnan(weight) else weight
+
+    def __comp__(self, other, comp: Callable[[float, float], bool]):
+        return (
+            comp(float(self.weight), other.weight)
+            if hasattr(other, "weight")
+            else NotImplemented
+        )
+
+    def __lt__(self, other):
+        return self.__comp__(other, float.__lt__)
+
+    def __le__(self, other):
+        return self.__comp__(other, float.__le__)
+
+    def __gt__(self, other):
+        return self.__comp__(other, float.__gt__)
+
+    def __ge__(self, other):
+        return self.__comp__(other, float.__ge__)
+
+
+class WeightedLocation(Location, Weighted):
     def __init__(self, file: str, line: int, weight: float):
         super().__init__(file, line)
-        self.weight = 0 if math.isnan(weight) else weight
+        Weighted.__init__(self, weight)
+
+
+class WeightedIdentifier(Weighted):
+    def __init__(self, identifier: int, weight: float):
+        super().__init__(weight)
+        self.identifier = identifier
 
 
 class LocalizationError(RuntimeError):
@@ -58,6 +88,6 @@ class Localization:
 
     def get_sorted_suggestions(self) -> List[WeightedLocation]:
         if self.prepared:
-            return sorted(self.get_suggestions(), key=lambda x: x.weight, reverse=True)
+            return sorted(self.get_suggestions(), reverse=True)
         else:
             raise LocalizationError("Localization not prepared")

@@ -50,6 +50,15 @@ class InsertAfter(Insert):
         return ast.Module(body=[tree, selection], type_ignores=[])
 
 
+class InsertBoth(InsertBefore, InsertAfter):
+    def __init__(self, identifier: int, choices: List[int]):
+        super().__init__(identifier, choices)
+        self.inserter = random.choice([InsertBefore, InsertAfter])
+
+    def insert(self, tree: ast.AST, selection: ast.AST) -> ast.AST:
+        return self.inserter.insert(self, tree, selection)
+
+
 class Replace(SelectionMutationOperator):
     def __init__(self, statement: ast.AST, statements: List[ast.AST]):
         super().__init__(statement, statements)
@@ -133,6 +142,21 @@ class MoveAfter(Move):
             ],
             type_ignores=[],
         )
+
+
+class MoveBoth(MoveBefore, MoveAfter):
+    def __init__(self, identifier: int, choices: List[int]):
+        super().__init__(identifier, choices)
+        self.mover = random.choice([MoveBefore, MoveAfter])
+
+    def mutate_other(
+        self,
+        mutations: Dict[int, ast.AST],
+        statements: Dict[int, ast.AST],
+        this: ast.AST,
+        other: ast.AST,
+    ):
+        self.mover.mutate_other(self, mutations, statements, this, other)
 
 
 class Swap(OtherMutationOperator):

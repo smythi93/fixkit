@@ -9,7 +9,7 @@ class Crossover(abc.ABC):
     @abc.abstractmethod
     def crossover(
         self, parent_x: GeneticCandidate, parent_y: GeneticCandidate
-    ) -> Optional[Tuple[GeneticCandidate, GeneticCandidate]]:
+    ) -> Tuple[GeneticCandidate, GeneticCandidate]:
         pass
 
 
@@ -23,6 +23,6 @@ class OnePointCrossover(Crossover):
         ax, bx = parent_x[:index_x], parent_x[index_x:]
         ay, by = parent_y[:index_y], parent_y[index_y:]
 
-        return GeneticCandidate(
-            parent_x.src, mutations=ax + by, gen=parent_x.gen + 1
-        ), GeneticCandidate(parent_y.src, mutations=ay + bx, gen=parent_y.gen + 1)
+        return parent_x.offspring(mutations=ax + by), parent_y.offspring(
+            mutations=ay + bx
+        )

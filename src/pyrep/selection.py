@@ -4,28 +4,32 @@ from typing import List
 
 import numpy.random
 
-from pyrep.candidate import Candidate
+from pyrep.candidate import GeneticCandidate
 
 
 class Selection:
     @abc.abstractmethod
     def select(
-        self, population: List[Candidate], population_size: int
-    ) -> List[Candidate]:
+        self, population: List[GeneticCandidate], population_size: int
+    ) -> List[GeneticCandidate]:
         pass
 
 
 class RandomSelection(Selection):
     def select(
-        self, population: List[Candidate], population_size: int
-    ) -> List[Candidate]:
+        self, population: List[GeneticCandidate], population_size: int
+    ) -> List[GeneticCandidate]:
+        if len(population) <= population_size:
+            return population
         return random.sample(population, k=population_size)
 
 
 class UniversalSelection(Selection):
     def select(
-        self, population: List[Candidate], population_size: int
-    ) -> List[Candidate]:
+        self, population: List[GeneticCandidate], population_size: int
+    ) -> List[GeneticCandidate]:
+        if len(population) <= population_size:
+            return population
         return numpy.random.choice(
             population,
             size=population_size,
@@ -39,8 +43,10 @@ class TournamentSelection(Selection):
         self.tournament_size = tournament_size
 
     def select(
-        self, population: List[Candidate], population_size: int
-    ) -> List[Candidate]:
+        self, population: List[GeneticCandidate], population_size: int
+    ) -> List[GeneticCandidate]:
+        if len(population) <= population_size:
+            return population
         population = population[:]
         candidates = list()
         for _ in range(population_size):
