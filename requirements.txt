@@ -1,4 +1,4 @@
-sflkit @ git+https://github.com/uds-se/sflkit
+sflkit>=0.2.16
 sflkitlib>=0.0.3
 pytest>=8.0.2
 pytest-cov>=4.1.0

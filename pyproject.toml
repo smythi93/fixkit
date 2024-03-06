@@ -1,0 +1,52 @@
+[build-system]
+requires = [
+    "setuptools>=69.1.1",
+    "wheel"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyrep"
+version = "0.0.1"
+authors = [
+    { name = "Marius Smytzek", email = "marius.smytzek@cispa.de" },
+    { name = "Martin Eberlein", email = "ebermart@informatik.hu-berlin.de" },
+]
+description = "PyRep is a collection of automatic program repair approaches in and for Python."
+readme = "README.md"
+license = { file = "COPYING" }
+requires-python = ">=3.11"
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Testing"
+]
+dependencies = [
+    "sflkit>=0.2.16",
+    "sflkitlib>=0.0.3",
+    "pytest>=8.0.2",
+    "pytest-cov>=4.1.0",
+    "pytest-json-report>=1.5.0",
+    "coverage>=7.4.3",
+    "numpy>=1.26.4",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/smythi93/pyrep"
+"Bug Tracker" = "https://github.com/smythi93/pyrep/issues"
+
+[project.scripts]
+pyrep = "pyrep.cli:main"
+
+[project.optional-dependencies]
+test = [
+    "pytest-html>=3.2.0",
+    "pytest-rerunfailures>=11.1.2",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
