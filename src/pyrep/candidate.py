@@ -1,3 +1,7 @@
+"""
+The candidate module provides the necessary tools to represent a candidate for repair.
+"""
+
 import ast
 import os
 from pathlib import Path
@@ -7,24 +11,27 @@ from pyrep.genetic.operators import MutationOperator
 
 
 class Candidate:
+    """
+    Class for representing a candidate for repair.
+    """
+
     def __init__(
         self,
         src: os.PathLike,
-        statements: Dict[int, ast.AST] = None,
-        trees: Iterable[os.PathLike] | Dict[os.PathLike, ast.AST] = None,
-        files: Dict[int, os.PathLike] = None,
-        lines: Dict[str, Dict[int, List[int]]] = None,
+        statements: Optional[Dict[int, ast.AST]] = None,
+        trees: Optional[Iterable[os.PathLike] | Dict[os.PathLike, ast.AST]] = None,
+        files: Optional[Dict[int, os.PathLike]] = None,
+        lines: Optional[Dict[str, Dict[int, List[int]]]] = None,
     ):
         """
         Initialize the class with the provided source path, statements, trees, files, and lines.
-        :param src (os.PathLike): The source path.
-        :param statements (Dict[int, ast.AST], optional): Dictionary of statement indices and AST objects.
-        Defaults to None.
-        :param trees (Iterable[os.PathLike] | Dict[os.PathLike, ast.AST], optional): Iterable of source paths or
-        dictionary of source paths and AST objects. Defaults to None.
-        :param files (Dict[int, os.PathLike], optional): Dictionary of file indices and source paths. Defaults to None.
-        :param lines (Dict[str, Dict[int, List[int]]], optional): Dictionary of source paths and line numbers to
-        statement identifiers. Defaults to None.
+        :param os.PathLike src: The source path.
+        :param Optional[Dict[int, ast.AST]] statements: Dictionary of statement indices and AST objects.
+        :param Optional[Iterable[os.PathLike] | Dict[os.PathLike, ast.AST]] trees: Iterable of source paths or
+        dictionary of source paths and AST objects.
+        :param Optional[Dict[int, os.PathLike]] files: Dictionary of file indices and source paths.
+        :param Optional[Dict[str, Dict[int, List[int]]]] lines: Dictionary of source paths and line numbers to
+        statement identifiers.
         """
         self.src: Path = Path(src)
         self.statements = statements or dict()
@@ -40,6 +47,7 @@ class Candidate:
     def clone(self) -> "Candidate":
         """
         Create a new Candidate object with the same properties as the current one.
+        :return Candidate: The new Candidate object.
         """
         return Candidate(self.src, self.statements, self.trees, self.files, self.lines)
 
@@ -50,14 +58,14 @@ class Candidate:
         """
         return f"Candidate@{self.src}"
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """
         Return the hash of the source path.
         :return int: The hash of the source path.
         """
         return hash(self.src)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         """
         Return True if the source paths are equal, False otherwise.
         :param other: The other object to compare.
@@ -67,6 +75,10 @@ class Candidate:
 
 
 class GeneticCandidate(Candidate):
+    """
+    Class for representing a genetic candidate for repair.
+    """
+
     def __init__(
         self,
         src: os.PathLike,
@@ -79,18 +91,18 @@ class GeneticCandidate(Candidate):
         lines: Dict[os.PathLike, Dict[int, List[int]]] = None,
     ):
         """
-        Initialize the class with the provided source path, generation number, fitness level, trees, and files.
-        :param src (os.PathLike): The source path.
-        :param mutations (List[MutationOperator], optional): List of mutation operators. Defaults to None.
-        :param gen (int, optional): Generation number. Defaults to 0.
-        :param fitness (float, optional): Fitness level. Defaults to 0.0.
-        :param statements (Dict[int, ast.AST], optional): Dictionary of statement indices and AST objects.
-        Defaults to None.
-        :param trees (Iterable[os.PathLike] | Dict[os.PathLike, ast.AST], optional): Iterable of source paths or
-        dictionary of source paths and AST objects. Defaults to None.
-        :param files (Dict[int, os.PathLike], optional): Dictionary of file indices and source paths. Defaults to None.
-        :param lines (Dict[str, Dict[int, List[int]]], optional): Dictionary of source paths and line numbers to
-        statement identifiers. Defaults to None.
+        Initialize the class with the provided source path, mutations, generation number, fitness, statements, trees,
+        files, and lines.
+        :param os.PathLike src: The source path.
+        :param Optional[List[MutationOperator]] mutations: List of mutation operators.
+        :param int gen: The generation number.
+        :param float fitness: The fitness of the candidate.
+        :param Dict[int, ast.AST] statements: Dictionary of statement indices and AST objects.
+        :param Optional[Iterable[os.PathLike] | Dict[os.PathLike, ast.AST]] trees: Iterable of source paths or
+        dictionary of source paths and AST objects.
+        :param Optional[Dict[int, os.PathLike]] files: Dictionary of file indices and source paths.
+        :param Optional[Dict[os.PathLike, Dict[int, List[int]]]] lines: Dictionary of source paths and line numbers to
+        statement identifiers.
         """
         super().__init__(src, statements, trees, files, lines)
         self.mutations = mutations or list()
@@ -101,7 +113,7 @@ class GeneticCandidate(Candidate):
     def from_candidate(candidate: Candidate) -> "GeneticCandidate":
         """
         Create a new GeneticCandidate object with the same properties as the given Candidate object.
-        :param candidate (Candidate): The Candidate object to copy.
+        :param Candidate candidate: The Candidate object to create the GeneticCandidate from.
         :return GeneticCandidate: The new GeneticCandidate object.
         """
         return GeneticCandidate(
@@ -112,10 +124,10 @@ class GeneticCandidate(Candidate):
             lines=candidate.lines,
         )
 
-    def clone(self, change_gen: bool = True) -> "GeneticCandidate":
+    def clone(self, change_gen: Optional[bool] = True) -> "GeneticCandidate":
         """
         Create a new GeneticCandidate object with the same properties as the current one.
-        :param change_gen (bool, optional): Whether to change the generation number. Defaults to True.
+        :param Optional[bool] change_gen: Whether to change the generation number. Defaults to True.
         :return GeneticCandidate: The new GeneticCandidate object.
         """
         return GeneticCandidate(
@@ -132,18 +144,22 @@ class GeneticCandidate(Candidate):
     def __len__(self) -> int:
         """
         Return the length of the mutations list.
+        :return int: The length of the mutations list.
         """
         return len(self.mutations)
 
     def __getitem__(self, item) -> MutationOperator | List[MutationOperator]:
         """
         Return the item at the given index in the mutations list.
+        :param item: The index of the item to return.
+        :return MutationOperator | List[MutationOperator]: The item at the given index in the mutations list.
         """
         return self.mutations[item]
 
     def __iter__(self) -> Iterable[MutationOperator]:
         """
         Returns an iterator object that iterates over the mutations of the class instance.
+        :return Iterable[MutationOperator]: An iterator object that iterates over the mutations of the class instance.
         """
         return iter(self.mutations)
 
@@ -152,8 +168,8 @@ class GeneticCandidate(Candidate):
     ) -> "GeneticCandidate":
         """
         Create a new GeneticCandidate object with the given mutations and generation number.
-        :param mutations (List[MutationOperator]): List of mutation operators.
-        :param change_gen (bool, optional): Whether to change the generation number. Defaults to True.
+        :param List[MutationOperator] mutations: The mutations to add to the new GeneticCandidate object.
+        :param bool change_gen: Whether to change the generation number. Defaults to True.
         :return GeneticCandidate: The new GeneticCandidate object.
         """
         candidate = self.clone(change_gen=change_gen)
@@ -167,14 +183,14 @@ class GeneticCandidate(Candidate):
         """
         return f"GeneticCandidate@{self.src}({self.gen})[{self.fitness:.2f}]"
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         """
         Return the hash of the source path.
-        :return:
+        :return int: The hash of the source path.
         """
         return hash(tuple(self.mutations))
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         """
         Return True if the source paths and mutations are equal, False otherwise.
         :param other: The other object to compare.
@@ -186,3 +202,6 @@ class GeneticCandidate(Candidate):
             and self.src == other.src
             and self.mutations == other.mutations
         )
+
+
+__all__ = ["Candidate", "GeneticCandidate"]

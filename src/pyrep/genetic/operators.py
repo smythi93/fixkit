@@ -1,29 +1,65 @@
+"""
+The operators module provides the necessary tools to perform mutation operations on statements.
+"""
+
 import abc
 import ast
 import copy
 import random
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional, Set, Type
 
 
 class MutationOperator(abc.ABC):
+    """
+    Abstract class for mutation operators.
+    """
+
     def __init__(self, identifier: int, choices: Optional[List[int]] = None):
+        """
+        Initialize the mutation operator.
+        :param int identifier: The identifier of the statement to mutate.
+        :param Optional[List[int]] choices: The list of identifiers to choose from for the mutation.
+        """
         self.identifier = identifier
         self.choices = choices or list()
 
     @abc.abstractmethod
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        """
+        Abstract method for mutating the statements, by changing the mutations' dictionary.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        """
         return NotImplemented
 
     def __hash__(self):
+        """
+        Hash the mutation operator.
+        :return: The hash of the mutation operator based on the class name and identifier.
+        """
         return hash((self.__class__.__name__, self.identifier))
 
     @abc.abstractmethod
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
+        """
+        Abstract method for comparing the mutation operator with another.
+        :param other: The other mutation operator to compare with.
+        :return bool: True if the mutation operators are equal, False otherwise.
+        """
         return NotImplemented
 
 
 class Delete(MutationOperator):
+    """
+    Mutation operator for deleting a statement.
+    """
+
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        """
+        Mutate the statements by deleting the statement with the identifier.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        """
         mutations[self.identifier] = ast.Pass()
 
     def __hash__(self):
@@ -34,13 +70,31 @@ class Delete(MutationOperator):
 
 
 class SelectionMutationOperator(MutationOperator, abc.ABC):
+    """
+    Abstract class for selection mutation operators that leverages another statement based on choices.
+    """
+
     def __init__(self, identifier: int, choices: List[int]):
+        """
+        Initialize the selection mutation operator.
+        :param int identifier: The identifier of the statement to mutate.
+        :param Optional[List[int]] choices: The list of identifiers to choose from for the mutation.
+        """
         super().__init__(identifier, choices)
         self.selection_identifier = random.choice(self.choices)
 
 
 class Insert(SelectionMutationOperator, abc.ABC):
+    """
+    Abstract class for insertion mutation operators that insert a statement before or after another statement.
+    """
+
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        """
+        Mutate the statements by inserting the statement with the identifier before or after the selection identifier.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        """
         mutations[self.identifier] = self.insert(
             mutations.get(self.identifier, statements[self.identifier]),
             mutations.get(
@@ -50,11 +104,27 @@ class Insert(SelectionMutationOperator, abc.ABC):
 
     @abc.abstractmethod
     def insert(self, tree: ast.AST, selection: ast.AST) -> ast.AST:
+        """
+        Abstract method for inserting the selection before or after the tree.
+        :param ast.Ast tree: The tree to insert the selection.
+        :param ast.Ast selection: The statement to insert.
+        :return: The tree with the selection inserted before or after the tree.
+        """
         pass
 
 
 class InsertBefore(Insert):
+    """
+    Mutation operator for inserting a statement before another statement.
+    """
+
     def insert(self, tree: ast.AST, selection: ast.AST) -> ast.AST:
+        """
+        Insert the selection before the tree.
+        :param ast.Ast tree: The tree to insert the selection.
+        :param ast.Ast selection: The statement to insert.
+        :return: The tree with the selection inserted before the tree.
+        """
         return ast.Module(body=[selection, tree], type_ignores=[])
 
     def __hash__(self):
@@ -69,7 +139,17 @@ class InsertBefore(Insert):
 
 
 class InsertAfter(Insert):
+    """
+    Mutation operator for inserting a statement after another statement.
+    """
+
     def insert(self, tree: ast.AST, selection: ast.AST) -> ast.AST:
+        """
+        Insert the selection after the tree.
+        :param ast.Ast tree: The tree to insert the selection.
+        :param ast.Ast selection: The statement to insert.
+        :return: The tree with the selection inserted after the tree.
+        """
         return ast.Module(body=[tree, selection], type_ignores=[])
 
     def __hash__(self):
@@ -84,11 +164,27 @@ class InsertAfter(Insert):
 
 
 class InsertBoth(Insert):
+    """
+    Mutation operator for inserting a statement before or after another statement.
+    """
+
     def __init__(self, identifier: int, choices: List[int]):
+        """
+        Initialize the insert both mutation operator.
+        :param int identifier: The identifier of the statement to mutate.
+        :param List[int] choices: The list of identifiers to choose from for the mutation.
+        """
         super().__init__(identifier, choices)
+        # Choose the inserter to insert before or after the selection.
         self.inserter = random.choice([InsertBefore, InsertAfter])
 
     def insert(self, tree: ast.AST, selection: ast.AST) -> ast.AST:
+        """
+        Insert the selection before or after the tree based on the inserter chosen.
+        :param ast.Ast tree: The tree to insert the selection.
+        :param ast.Ast selection: The statement to insert.
+        :return: The tree with the selection inserted before or after the tree.
+        """
         return self.inserter.insert(self, tree, selection)
 
     def __hash__(self):
@@ -104,10 +200,17 @@ class InsertBoth(Insert):
 
 
 class Replace(SelectionMutationOperator):
-    def __init__(self, statement: ast.AST, statements: List[ast.AST]):
-        super().__init__(statement, statements)
+    """
+    Mutation operator for replacing a statement with another statement.
+    """
 
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        """
+        Mutate the statements by replacing the statement of the identifier with the statement of the selection
+        identifier.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        """
         mutations[self.identifier] = mutations.get(
             self.selection_identifier, statements[self.selection_identifier]
         )
@@ -124,61 +227,121 @@ class Replace(SelectionMutationOperator):
 
 
 class OtherMutationOperator(SelectionMutationOperator, abc.ABC):
+    """
+    Abstract class for mutation that mutate both the statement given by the identifier and another statement given by
+    the selection.
+    """
+
     @abc.abstractmethod
-    def mutate_this(
+    def mutate_identifier(
         self,
         mutations: Dict[int, ast.AST],
         statements: Dict[int, ast.AST],
         this: ast.AST,
         other: ast.AST,
     ):
+        """
+        Abstract method for mutating the statement given by the identifier.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        :param ast.AST this: The statement of the identifier.
+        :param ast.AST other: The statement of the selection identifier.
+        """
         pass
 
     @abc.abstractmethod
-    def mutate_other(
+    def mutate_selection(
         self,
         mutations: Dict[int, ast.AST],
         statements: Dict[int, ast.AST],
         this: ast.AST,
         other: ast.AST,
     ):
+        """
+        Abstract method for mutating the statement given by the selection identifier.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        :param ast.AST this: The statement of the identifier.
+        :param ast.AST other: The statement of the selection identifier.
+        """
         pass
 
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        """
+        Mutate the statements by mutating the statement given by the identifier and the statement given by the
+        selection.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        """
+        # Get the statement of the identifier and the statement of the selection identifier with the current mutations
+        # or the statements as default.
         this = mutations.get(self.identifier, statements[self.identifier])
         other = mutations.get(
             self.selection_identifier, statements[self.selection_identifier]
         )
-        self.mutate_this(mutations, statements, this, other)
-        self.mutate_other(mutations, statements, this, other)
+        self.mutate_identifier(mutations, statements, this, other)
+        self.mutate_selection(mutations, statements, this, other)
 
 
 class Move(OtherMutationOperator, abc.ABC):
-    def mutate_this(
+    """
+    Abstract class for moving a statement before or after another statement.
+    """
+
+    def mutate_selection(
         self,
         mutations: Dict[int, ast.AST],
         statements: Dict[int, ast.AST],
         this: ast.AST,
         other: ast.AST,
     ):
-        mutations[self.identifier] = ast.Pass()
+        """
+        Mutate the statement given by the selection identifier by deleting it.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        :param ast.AST this: The statement of the identifier.
+        :param ast.AST other: The statement of the selection identifier.
+        """
+        mutations[self.selection_identifier] = ast.Pass()
+
+    def move(
+        self,
+        body: List[ast.AST],
+        mutations: Dict[int, ast.AST],
+    ):
+        """
+        Create a module based on the new body.
+        :param List[ast.AST] body: The list of statements to move the selection identifier before or after the
+        identifier.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        """
+        mutations[self.identifier] = ast.Module(
+            body=body,
+            type_ignores=[],
+        )
 
 
 class MoveBefore(Move):
-    def mutate_other(
+    """
+    Mutation operator for moving a statement before another statement.
+    """
+
+    def mutate_identifier(
         self,
         mutations: Dict[int, ast.AST],
         statements: Dict[int, ast.AST],
         this: ast.AST,
         other: ast.AST,
     ):
-        mutations[self.selection_identifier] = ast.Module(
-            body=[
-                this,
-                other,
-            ],
-            type_ignores=[],
-        )
+        """
+        Mutate the statement given by the identifier by moving the statement given by the selection identifier before
+        it.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        :param ast.AST this: The statement of the identifier.
+        :param ast.AST other: The statement of the selection identifier.
+        """
+        self.move([other, this], mutations)
 
     def __hash__(self):
         return super().__hash__()
@@ -192,20 +355,26 @@ class MoveBefore(Move):
 
 
 class MoveAfter(Move):
-    def mutate_other(
+    """
+    Mutation operator for moving a statement after another statement.
+    """
+
+    def mutate_identifier(
         self,
         mutations: Dict[int, ast.AST],
         statements: Dict[int, ast.AST],
         this: ast.AST,
         other: ast.AST,
     ):
-        mutations[self.selection_identifier] = ast.Module(
-            body=[
-                other,
-                this,
-            ],
-            type_ignores=[],
-        )
+        """
+        Mutate the statement given by the identifier by moving the statement given by the selection identifier after
+        it.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        :param ast.AST this: The statement of the identifier.
+        :param ast.AST other: The statement of the selection identifier.
+        """
+        self.move([this, other], mutations)
 
     def __hash__(self):
         return super().__hash__()
@@ -219,18 +388,36 @@ class MoveAfter(Move):
 
 
 class MoveBoth(Move):
-    def __init__(self, identifier: int, choices: List[int]):
-        super().__init__(identifier, choices)
-        self.mover = random.choice([MoveBefore, MoveAfter])
+    """
+    Mutation operator for moving a statement before or after another statement.
+    """
 
-    def mutate_other(
+    def __init__(self, identifier: int, choices: List[int]):
+        """
+        Initialize the move both mutation operator.
+        :param int identifier: The identifier of the statement to mutate.
+        :param List[int] choices: The list of identifiers to choose from for the mutation.
+        """
+        super().__init__(identifier, choices)
+        # Choose the mover to move the selection identifier before or after the identifier.
+        self.mover: Type[Move] = random.choice([MoveBefore, MoveAfter])
+
+    def mutate_identifier(
         self,
         mutations: Dict[int, ast.AST],
         statements: Dict[int, ast.AST],
         this: ast.AST,
         other: ast.AST,
     ):
-        self.mover.mutate_other(self, mutations, statements, this, other)
+        """
+        Mutate the statement given by the identifier by moving the statement given by the selection identifier before or
+        after it based on the mover chosen.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        :param ast.AST this: The statement of the identifier.
+        :param ast.AST other: The statement of the selection identifier.
+        """
+        self.mover.mutate_identifier(self, mutations, statements, this, other)
 
     def __hash__(self):
         return super().__hash__()
@@ -245,22 +432,42 @@ class MoveBoth(Move):
 
 
 class Swap(OtherMutationOperator):
-    def mutate_this(
+    """
+    Mutation operator for swapping a statement with another statement.
+    """
+
+    def mutate_identifier(
         self,
         mutations: Dict[int, ast.AST],
         statements: Dict[int, ast.AST],
         this: ast.AST,
         other: ast.AST,
     ):
+        """
+        Mutate the statement given by the identifier by swapping it with the statement given by the selection
+        identifier.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        :param ast.AST this: The statement of the identifier.
+        :param ast.AST other: The statement of the selection identifier.
+        """
         mutations[self.identifier] = other
 
-    def mutate_other(
+    def mutate_selection(
         self,
         mutations: Dict[int, ast.AST],
         statements: Dict[int, ast.AST],
         this: ast.AST,
         other: ast.AST,
     ):
+        """
+        Mutate the statement given by the selection identifier by swapping it with the statement given by the
+        identifier.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        :param ast.AST this: The statement of the identifier.
+        :param ast.AST other: The statement of the selection identifier.
+        """
         mutations[self.selection_identifier] = this
 
     def __hash__(self):
@@ -275,7 +482,16 @@ class Swap(OtherMutationOperator):
 
 
 class Copy(MutationOperator):
+    """
+    Mutation operator for copying a statement.
+    """
+
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        """
+        Mutate the statements by copying the statement with the identifier.
+        :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
+        """
         statement = mutations.get(self.identifier, statements[self.identifier])
         mutations[self.identifier] = ast.Module(
             body=[statement, statement],
@@ -289,7 +505,11 @@ class Copy(MutationOperator):
         return isinstance(other, Copy) and self.identifier == other.identifier
 
 
-class ReplaceOperand(MutationOperator):
+class ReplaceOperator(MutationOperator):
+    """
+    Mutation operator for replacing an operand in a statement.
+    """
+
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         pass
 
@@ -300,23 +520,43 @@ class ReplaceOperand(MutationOperator):
         return False
 
 
-class ReplaceBinaryOperator(ReplaceOperand):
+class ReplaceBinaryOperator(ReplaceOperator):
+    """
+    Mutation operator for replacing a binary operator in a statement.
+    """
+
     pass
 
 
-class ReplaceComparisonOperator(ReplaceOperand):
+class ReplaceComparisonOperator(ReplaceOperator):
+    """
+    Mutation operator for replacing a comparison operator in a statement.
+    """
+
     pass
 
 
-class ReplaceUnaryOperator(ReplaceOperand):
+class ReplaceUnaryOperator(ReplaceOperator):
+    """
+    Mutation operator for replacing a unary operator in a statement.
+    """
+
     pass
 
 
-class ReplaceBooleanOperator(ReplaceOperand):
+class ReplaceBooleanOperator(ReplaceOperator):
+    """
+    Mutation operator for replacing a boolean operator in a statement.
+    """
+
     pass
 
 
 class Rename(MutationOperator):
+    """
+    Mutation operator for renaming an identifier in a statement.
+    """
+
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         pass
 
@@ -328,11 +568,21 @@ class Rename(MutationOperator):
 
 
 class Mutator(ast.NodeTransformer):
+    """
+    Mutator class to mutate the abstract syntax tree based on the mutation operators.
+    """
+
     def __init__(
         self, statements: Dict[int, ast.AST], mutations: List[MutationOperator]
     ):
+        """
+        Initialize the mutator.
+        :param Dict[int, ast.AST] statements: The dictionary of original statements used for mutating.
+        :param List[MutationOperator] mutations: The list of mutation operators to apply to the statements.
+        """
         self.statements = statements
         self.mutations = mutations
+        # Create a map of the mutations.
         self.identifier_map = dict()
         for m in self.mutations:
             m.mutate(self.identifier_map, self.statements)
@@ -341,7 +591,12 @@ class Mutator(ast.NodeTransformer):
             for identifier in self.identifier_map
         }
 
-    def generic_visit(self, node):
+    def generic_visit(self, node: ast.AST) -> ast.AST:
+        """
+        Visit the node and mutate it based on the mutation map.
+        :param ast.AST node: The node to visit and mutate.
+        :return ast.AST: The mutated node.
+        """
         if node in self.mutation_map:
             return self.mutation_map[node]
         node = copy.copy(node)
@@ -366,8 +621,33 @@ class Mutator(ast.NodeTransformer):
                     setattr(node, field, new_node)
         return node
 
-    def mutate(self, tree: ast.AST):
+    def mutate(self, tree: ast.AST) -> ast.AST:
+        """
+        Mutate the abstract syntax tree based on the mutation operators.
+        :param ast.AST tree: The abstract syntax tree to mutate.
+        :return ast.AST: The mutated abstract syntax tree.
+        """
         return self.visit(tree)
 
     def get_mutation_indices(self) -> Set[int]:
+        """
+        Get the set of mutation indices, i.e., the statements that will get mutated.
+        :return Set[int]: The set of mutation indices.
+        """
         return set(self.identifier_map.keys())
+
+
+__all__ = [
+    "MutationOperator",
+    "Delete",
+    "InsertAfter",
+    "InsertBefore",
+    "InsertBoth",
+    "Replace",
+    "MoveAfter",
+    "MoveBefore",
+    "MoveBoth",
+    "Swap",
+    "Copy",
+    "Mutator",
+]

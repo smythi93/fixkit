@@ -1,3 +1,7 @@
+"""
+The coverage module provides the necessary tools to localize a fault using coverage.py information.
+"""
+
 import json
 import os
 import re
@@ -7,12 +11,19 @@ from typing import Optional, List, Dict
 
 from sflkit.analysis.spectra import Spectrum
 
-from pyrep.localization import Localization, WeightedLocation
+from pyrep.localization.localization import Localization
+from pyrep.localization.location import WeightedLocation
 
+
+# Regular expression for parsing the context of a coverage line.
 CONTEXT_PATTERN = re.compile(r"(?P<test>[^|]+)\|run")
 
 
 class CoverageLocalization(Localization):
+    """
+    Class for localizing a fault using coverage.py information.
+    """
+
     def __init__(
         self,
         src: os.PathLike,
@@ -24,14 +35,30 @@ class CoverageLocalization(Localization):
         env: Optional[Dict[str, str]] = None,
         metric: Optional[str] = None,
     ):
+        """
+        Initialize the coverage localization.
+        :param os.PathLike src: The source directory of the project.
+        :param str cov: The coverage.py data prefix.
+        :param Optional[List[str]] failing: The set of failing tests, will override tests.
+        :param Optional[List[str]] passing: The set of passing tests, will override tests.
+        :param Optional[List[str]] tests: The set of all tests, as an alternative when an oracle exists.
+        :param Optional[os.PathLike] out: The output directory for the localization.
+        :param Optional[Dict[str, str]] env: The environment to run the tests in.
+        :param Optional[str] metric: The metric to use for the localization.
+        """
         super().__init__(src, failing, passing, tests, out, env, metric)
         self.cov = cov
         self.spectra = list()
 
     def run_preparation(self):
+        """
+        Run the preparation for the localization by executing the tests and collecting the coverage data.
+        """
         shutil.copytree(self.src, self.out, dirs_exist_ok=True)
+        # Get the passing and failing tests.
         passing_failing = (self.passing or set()) | (self.failing or set())
         tests = list(passing_failing or self.tests or {"tests"})
+        # Run the tests and collect the coverage data.
         subprocess.run(
             [
                 "python",
@@ -49,6 +76,7 @@ class CoverageLocalization(Localization):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
+        # Parse the coverage data into a list of passing and failing spectra.
         self.passing = set()
         self.failing = set()
         with open(self.out / ".report.json") as fp:
@@ -81,5 +109,12 @@ class CoverageLocalization(Localization):
                 pn, fn = len(self.passing) - po, len(self.failing) - fo
                 self.spectra.append(Spectrum(file, line, po, pn, fo, fn))
 
-    def get_suggestions(self):
+    def get_suggestions(self) -> List[WeightedLocation]:
+        """
+        Get the suggestions of the localization by calculating the metric based on the spectra.
+        :return List[WeightedLocation]: The list of weighted locations.
+        """
         return [WeightedLocation(s.file, s.line, self.metric(s)) for s in self.spectra]
+
+
+__all__ = ["CoverageLocalization"]

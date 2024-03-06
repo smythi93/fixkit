@@ -1,7 +1,11 @@
+"""
+This module contains the StatementFinder class, which is used to search for statements in a given source file or
+directory.
+"""
+
 import ast
 import fnmatch
 import os
-import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -9,15 +13,19 @@ from pyrep.candidate import Candidate
 
 
 class SearchError(RuntimeError):
+    """
+    Error raised when the source has not been searched.
+    """
+
     pass
 
 
 class StatementFinder(ast.NodeVisitor):
     def __init__(self, src: os.PathLike, excludes: Optional[List[str]] = None):
         """
-        Initializes the object with the given source path and optional base path.
-
-        :param src: The source path
+        Initialize the StatementFinder with the given source path and optional excludes.
+        :param os.PathLike src: The source path to search.
+        :param Optional[List[str]] excludes: The list of patterns to exclude from the search.
         """
         self.identifier = 0
         self.statements: Dict[int, ast.AST] = dict()
@@ -31,10 +39,8 @@ class StatementFinder(ast.NodeVisitor):
 
     def build_candidate(self) -> Candidate:
         """
-        Build a candidate based on whether the source has been searched or not.
-
-        :return Candidate: The candidate built from the source and trees if the source has been searched.
-        :raises SearchError: If the source has not been searched.
+        Build a candidate from the search results.
+        :return Candidate: The candidate built from the search results.
         """
         if self.searched:
             return Candidate(
@@ -66,9 +72,7 @@ class StatementFinder(ast.NodeVisitor):
     def _search_file(self, file: str):
         """
         Search a file and parse its content using the given file path. Store the parsed tree in the trees' dictionary.
-        :param file: The file path to be searched and parsed
-        :type file: Path
-        :return: None
+        :param str file: The file path to be searched and parsed.
         """
         src = self.src / file
         if (
@@ -83,11 +87,10 @@ class StatementFinder(ast.NodeVisitor):
             self.current_file = file
             self.visit(tree)
 
-    def generic_visit(self, node):
+    def generic_visit(self, node: ast.AST):
         """
         This function collects the statements and assigns an identifier to each statement.
-        :param node: The node to be visited
-        :return: None
+        :param ast.AST node: The node to be visited.
         """
         if isinstance(node, ast.stmt):
             identifier = self.next_identifier()
@@ -100,10 +103,14 @@ class StatementFinder(ast.NodeVisitor):
             self.lines[self.current_file][node.lineno].append(identifier)
         return super().generic_visit(node)
 
-    def next_identifier(self):
+    def next_identifier(self) -> int:
         """
         This function returns the next identifier.
+        :return int: The next identifier.
         """
         identifier = self.identifier
         self.identifier += 1
         return identifier
+
+
+__all__ = ["StatementFinder", "SearchError"]

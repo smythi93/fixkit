@@ -1,3 +1,7 @@
+"""
+The selection module provides the necessary tools to select candidates from a population.
+"""
+
 import abc
 import random
 from typing import List
@@ -7,18 +11,38 @@ import numpy.random
 from pyrep.candidate import GeneticCandidate
 
 
-class Selection:
+class Selection(abc.ABC):
+    """
+    Abstract class for selection operators.
+    """
+
     @abc.abstractmethod
     def select(
         self, population: List[GeneticCandidate], population_size: int
     ) -> List[GeneticCandidate]:
+        """
+        Abstract method for selecting candidates from a population.
+        :param List[GeneticCandidate] population: The population to select from.
+        :param int population_size: The size of the population to select.
+        :return List[GeneticCandidate]: The selected population.
+        """
         pass
 
 
 class RandomSelection(Selection):
+    """
+    Random selection operator.
+    """
+
     def select(
         self, population: List[GeneticCandidate], population_size: int
     ) -> List[GeneticCandidate]:
+        """
+        Select a random population from the given population.
+        :param List[GeneticCandidate] population: The population to select from.
+        :param int population_size: The size of the population to select.
+        :return List[GeneticCandidate]: The selected population.
+        """
         if len(population) <= population_size:
             return population
         return random.sample(population, k=population_size)
@@ -28,6 +52,12 @@ class UniversalSelection(Selection):
     def select(
         self, population: List[GeneticCandidate], population_size: int
     ) -> List[GeneticCandidate]:
+        """
+        Select a population from the given population using the universal selection method.
+        :param List[GeneticCandidate] population: The population to select from.
+        :param int population_size: The size of the population to select.
+        :return List[GeneticCandidate]: The selected population.
+        """
         if len(population) <= population_size:
             return population
         fitness = numpy.array([c.fitness for c in population], dtype=float)
@@ -48,6 +78,12 @@ class TournamentSelection(Selection):
     def select(
         self, population: List[GeneticCandidate], population_size: int
     ) -> List[GeneticCandidate]:
+        """
+        Select a population from the given population using the tournament selection method.
+        :param List[GeneticCandidate] population: The population to select from.
+        :param int population_size: The size of the population to select.
+        :return List[GeneticCandidate]: The selected population.
+        """
         if len(population) <= population_size:
             return population
         population = population[:]
@@ -65,3 +101,6 @@ class TournamentSelection(Selection):
             candidates.append(choice)
             population.remove(choice)
         return candidates
+
+
+__all__ = ["Selection", "RandomSelection", "UniversalSelection", "TournamentSelection"]

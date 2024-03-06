@@ -37,7 +37,7 @@ class TestGenetic(unittest.TestCase):
         cls.finder.search_source()
         cls.candidate = GeneticCandidate.from_candidate(cls.finder.build_candidate())
         cls.statements = cls.finder.statements
-        cls.statements[3] = ast.Assign(
+        cls.statements[2] = ast.Assign(
             targets=[ast.Name(id="z")], value=ast.Num(n=3), lineno=3
         )
         cls.tree = cls.candidate.trees["."]
@@ -59,7 +59,7 @@ class TestMutations(TestGenetic):
 
     def test_delete(self):
         stmts = dict(self.statements)
-        mutator = Mutator(stmts, [Delete(0, [3])])
+        mutator = Mutator(stmts, [Delete(0, [2])])
         tree = mutator.mutate(self.tree)
         self.assertIsInstance(tree, ast.Module)
         self.assertEqual(2, len(tree.body))
@@ -68,7 +68,7 @@ class TestMutations(TestGenetic):
 
     def test_insert_before(self):
         stmts = dict(self.statements)
-        mutator = Mutator(stmts, [InsertBefore(0, [3])])
+        mutator = Mutator(stmts, [InsertBefore(0, [2])])
         tree = mutator.mutate(self.tree)
         self.assertIsInstance(tree, ast.Module)
         self.assertEqual(2, len(tree.body))
@@ -81,7 +81,7 @@ class TestMutations(TestGenetic):
 
     def test_insert_after(self):
         stmts = dict(self.statements)
-        mutator = Mutator(stmts, [InsertAfter(0, [3])])
+        mutator = Mutator(stmts, [InsertAfter(0, [2])])
         tree = mutator.mutate(self.tree)
         self.assertIsInstance(tree, ast.Module)
         self.assertEqual(2, len(tree.body))
@@ -94,7 +94,7 @@ class TestMutations(TestGenetic):
 
     def test_replace(self):
         stmts = dict(self.statements)
-        mutator = Mutator(stmts, [Replace(0, [3])])
+        mutator = Mutator(stmts, [Replace(0, [2])])
         tree = mutator.mutate(self.tree)
         self.assertIsInstance(tree, ast.Module)
         self.assertEqual(2, len(tree.body))
@@ -107,12 +107,12 @@ class TestMutations(TestGenetic):
         tree = mutator.mutate(self.tree)
         self.assertIsInstance(tree, ast.Module)
         self.assertEqual(2, len(tree.body))
-        self.assertIsInstance(tree.body[0], ast.Module)
-        module: ast.Module = tree.body[0]
+        self.assertIsInstance(tree.body[0], ast.Pass)
+        self.assertIsInstance(tree.body[1], ast.Module)
+        module: ast.Module = tree.body[1]
         self.assertEqual(2, len(module.body))
-        self.verify_assign(module.body[0], "y", 2)
-        self.verify_assign(module.body[1], "x", 1)
-        self.assertIsInstance(tree.body[1], ast.Pass)
+        self.verify_assign(module.body[0], "x", 1)
+        self.verify_assign(module.body[1], "y", 2)
 
     def test_move_after(self):
         stmts = dict(self.statements)
@@ -120,12 +120,12 @@ class TestMutations(TestGenetic):
         tree = mutator.mutate(self.tree)
         self.assertIsInstance(tree, ast.Module)
         self.assertEqual(2, len(tree.body))
-        self.assertIsInstance(tree.body[0], ast.Pass)
-        self.assertIsInstance(tree.body[1], ast.Module)
-        module: ast.Module = tree.body[1]
+        self.assertIsInstance(tree.body[0], ast.Module)
+        module: ast.Module = tree.body[0]
         self.assertEqual(2, len(module.body))
-        self.verify_assign(module.body[0], "y", 2)
-        self.verify_assign(module.body[1], "x", 1)
+        self.verify_assign(module.body[0], "x", 1)
+        self.verify_assign(module.body[1], "y", 2)
+        self.assertIsInstance(tree.body[1], ast.Pass)
 
     def test_swap(self):
         stmts = dict(self.statements)
@@ -155,17 +155,25 @@ class TestMutations(TestGenetic):
             stmts,
             [
                 Delete(0, []),
-                Replace(0, [3]),
+                Replace(0, [2]),
                 Copy(1, []),
                 MoveBefore(0, [1]),
                 Delete(1, []),
-                InsertAfter(1, [3]),
+                InsertAfter(1, [2]),
             ],
         )
         tree = mutator.mutate(self.tree)
         self.assertIsInstance(tree, ast.Module)
         self.assertEqual(2, len(tree.body))
-        self.assertIsInstance(tree.body[0], ast.Pass)
+        self.assertIsInstance(tree.body[0], ast.Module)
+        module_0: ast.Module = tree.body[0]
+        self.assertEqual(2, len(module_0.body))
+        self.assertIsInstance(module_0.body[0], ast.Module)
+        module_0_0: ast.Module = module_0.body[0]
+        self.assertEqual(2, len(module_0_0.body))
+        self.verify_assign(module_0_0.body[0], "y", 2)
+        self.verify_assign(module_0_0.body[1], "y", 2)
+        self.verify_assign(module_0.body[1], "z", 3)
         self.assertIsInstance(tree.body[1], ast.Module)
         module_1: ast.Module = tree.body[1]
         self.assertEqual(2, len(module_1.body))
@@ -179,7 +187,7 @@ class TestCrossover(TestGenetic):
         py = self.candidate.clone()
         px.mutations = [
             Delete(0, []),
-            InsertBefore(0, [3]),
+            InsertBefore(0, [2]),
         ]
         py.mutations = [
             MoveAfter(0, [1]),

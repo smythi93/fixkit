@@ -1,3 +1,7 @@
+"""
+This module contains the constants used in the pyrep package.
+"""
+
 import os
 from pathlib import Path
 
@@ -28,3 +32,5 @@ DEFAULT_EXCLUDES = [
     "packaging",
     "setupext.py",
 ]
+
+__all__ = ["DEFAULT_EXCLUDES", "DEFAULT_WORK_DIR", "SFLKIT_EVENTS_PATH"]

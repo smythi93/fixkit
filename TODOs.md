@@ -1,4 +1,0 @@
-- [] Implement GenProg algorithm
-- [x] Implement engine and workers
-- [x] Add timeout
-- [x] Mapping Lines to STMT ids

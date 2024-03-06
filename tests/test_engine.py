@@ -32,7 +32,7 @@ class TestEngine(unittest.TestCase):
         engine = Engine(fitness, workers)
         engine.evaluate(candidates)
         for candidate in candidates:
-            self.assertAlmostEqual(5, candidate.fitness, delta=0.000001)
+            self.assertAlmostEqual(1 / 3, candidate.fitness, delta=0.000001)
 
     def test_engine_1(self):
         self.run_test(1)
