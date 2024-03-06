@@ -39,11 +39,23 @@ class WeightedLocation(Location, Weighted):
         super().__init__(file, line)
         Weighted.__init__(self, weight)
 
+    def __repr__(self):
+        return f"{self.file}:{self.line}[{self.weight:.4f}]"
+
+    def __str__(self):
+        return self.__repr__()
+
 
 class WeightedIdentifier(Weighted):
     def __init__(self, identifier: int, weight: float):
         super().__init__(weight)
         self.identifier = identifier
+
+    def __repr__(self):
+        return f"{self.identifier}[{self.weight:.4f}]"
+
+    def __str__(self):
+        return self.__repr__()
 
 
 class LocalizationError(RuntimeError):

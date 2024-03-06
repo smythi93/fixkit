@@ -1,5 +1,6 @@
 import ast
 import os
+from pathlib import Path
 from typing import Dict, Iterable, Optional, List
 
 from pyrep.genetic.operators import MutationOperator
@@ -25,7 +26,7 @@ class Candidate:
         :param lines (Dict[str, Dict[int, List[int]]], optional): Dictionary of source paths and line numbers to
         statement identifiers. Defaults to None.
         """
-        self.src = src
+        self.src: Path = Path(src)
         self.statements = statements or dict()
         if trees:
             self.trees = (
@@ -40,7 +41,29 @@ class Candidate:
         """
         Create a new Candidate object with the same properties as the current one.
         """
-        return Candidate(self.src, self.trees, self.files, self.lines)
+        return Candidate(self.src, self.statements, self.trees, self.files, self.lines)
+
+    def __repr__(self) -> str:
+        """
+        Return the string representation of the class instance.
+        :return str: The string representation of the class instance.
+        """
+        return f"Candidate@{self.src}"
+
+    def __hash__(self):
+        """
+        Return the hash of the source path.
+        :return int: The hash of the source path.
+        """
+        return hash(self.src)
+
+    def __eq__(self, other):
+        """
+        Return True if the source paths are equal, False otherwise.
+        :param other: The other object to compare.
+        :return bool: True if the source paths are equal, False otherwise.
+        """
+        return hasattr(other, "src") and self.src == other.src
 
 
 class GeneticCandidate(Candidate):
@@ -89,18 +112,21 @@ class GeneticCandidate(Candidate):
             lines=candidate.lines,
         )
 
-    def clone(self) -> "GeneticCandidate":
+    def clone(self, change_gen: bool = True) -> "GeneticCandidate":
         """
         Create a new GeneticCandidate object with the same properties as the current one.
+        :param change_gen (bool, optional): Whether to change the generation number. Defaults to True.
+        :return GeneticCandidate: The new GeneticCandidate object.
         """
         return GeneticCandidate(
-            self.src,
-            self.mutations,
-            self.gen,
-            self.fitness,
-            self.trees,
-            self.files,
-            self.lines,
+            src=self.src,
+            mutations=self.mutations,
+            gen=self.gen + 1 if change_gen else self.gen,
+            fitness=self.fitness,
+            statements=self.statements,
+            trees=self.trees,
+            files=self.files,
+            lines=self.lines,
         )
 
     def __len__(self) -> int:
@@ -121,12 +147,42 @@ class GeneticCandidate(Candidate):
         """
         return iter(self.mutations)
 
-    def offspring(self, mutations: List[MutationOperator]):
+    def offspring(
+        self, mutations: List[MutationOperator], change_gen: bool = True
+    ) -> "GeneticCandidate":
         """
         Create a new GeneticCandidate object with the given mutations and generation number.
         :param mutations (List[MutationOperator]): List of mutation operators.
+        :param change_gen (bool, optional): Whether to change the generation number. Defaults to True.
+        :return GeneticCandidate: The new GeneticCandidate object.
         """
-        candidate = self.clone()
+        candidate = self.clone(change_gen=change_gen)
         candidate.mutations = mutations
-        candidate.gen = self.gen + 1
         return candidate
+
+    def __repr__(self) -> str:
+        """
+        Return the string representation of the class instance.
+        :return str: The string representation of the class instance.
+        """
+        return f"GeneticCandidate@{self.src}({self.gen})[{self.fitness:.2f}]"
+
+    def __hash__(self):
+        """
+        Return the hash of the source path.
+        :return:
+        """
+        return hash(tuple(self.mutations))
+
+    def __eq__(self, other):
+        """
+        Return True if the source paths and mutations are equal, False otherwise.
+        :param other: The other object to compare.
+        :return bool: True if the source paths and mutations are equal, False otherwise.
+        """
+        return (
+            hasattr(other, "src")
+            and hasattr(other, "mutations")
+            and self.src == other.src
+            and self.mutations == other.mutations
+        )

@@ -16,6 +16,8 @@ from pyrep.genetic.operators import (
     InsertAfter,
     MoveAfter,
     Mutator,
+    InsertBoth,
+    MoveBoth,
 )
 from pyrep.stmt import StatementFinder
 
@@ -203,3 +205,35 @@ class TestCrossover(TestGenetic):
         self.assertEqual(4, len(cy))
         self.assertEqual([], cx.mutations)
         self.assertEqual(py.mutations + px.mutations, cy.mutations)
+
+
+class TestEquality(unittest.TestCase):
+    def test_equal(self):
+        tests = [
+            Delete(0, [0]),
+            Delete(1, [0]),
+            InsertAfter(0, [0]),
+            InsertAfter(1, [0]),
+            InsertBefore(0, [0]),
+            InsertBefore(1, [0]),
+            InsertBoth(0, [0]),
+            InsertBoth(1, [0]),
+            MoveAfter(0, [0]),
+            MoveAfter(1, [0]),
+            MoveBefore(0, [0]),
+            MoveBefore(1, [0]),
+            MoveBoth(0, [0]),
+            MoveBoth(1, [0]),
+            Replace(0, [0]),
+            Replace(1, [0]),
+            Copy(0, [0]),
+            Copy(1, [0]),
+        ]
+        for i in range(len(tests)):
+            for j in range(len(tests)):
+                if i == j:
+                    self.assertEqual(hash(tests[i]), hash(tests[j]))
+                    self.assertEqual(tests[i], tests[j])
+                else:
+                    self.assertNotEqual(hash(tests[i]), hash(tests[j]))
+                    self.assertNotEqual(tests[i], tests[j])

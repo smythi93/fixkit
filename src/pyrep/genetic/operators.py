@@ -12,12 +12,25 @@ class MutationOperator(abc.ABC):
 
     @abc.abstractmethod
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
-        pass
+        return NotImplemented
+
+    def __hash__(self):
+        return hash((self.__class__.__name__, self.identifier))
+
+    @abc.abstractmethod
+    def __eq__(self, other):
+        return NotImplemented
 
 
 class Delete(MutationOperator):
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         mutations[self.identifier] = ast.Pass()
+
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        return isinstance(other, Delete) and self.identifier == other.identifier
 
 
 class SelectionMutationOperator(MutationOperator, abc.ABC):
@@ -44,19 +57,50 @@ class InsertBefore(Insert):
     def insert(self, tree: ast.AST, selection: ast.AST) -> ast.AST:
         return ast.Module(body=[selection, tree], type_ignores=[])
 
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, InsertBefore)
+            and self.identifier == other.identifier
+            and self.selection_identifier == other.selection_identifier
+        )
+
 
 class InsertAfter(Insert):
     def insert(self, tree: ast.AST, selection: ast.AST) -> ast.AST:
         return ast.Module(body=[tree, selection], type_ignores=[])
 
+    def __hash__(self):
+        return super().__hash__()
 
-class InsertBoth(InsertBefore, InsertAfter):
+    def __eq__(self, other):
+        return (
+            isinstance(other, InsertAfter)
+            and self.identifier == other.identifier
+            and self.selection_identifier == other.selection_identifier
+        )
+
+
+class InsertBoth(Insert):
     def __init__(self, identifier: int, choices: List[int]):
         super().__init__(identifier, choices)
         self.inserter = random.choice([InsertBefore, InsertAfter])
 
     def insert(self, tree: ast.AST, selection: ast.AST) -> ast.AST:
         return self.inserter.insert(self, tree, selection)
+
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, InsertBoth)
+            and self.identifier == other.identifier
+            and self.selection_identifier == other.selection_identifier
+            and self.inserter == other.inserter
+        )
 
 
 class Replace(SelectionMutationOperator):
@@ -66,6 +110,16 @@ class Replace(SelectionMutationOperator):
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         mutations[self.identifier] = mutations.get(
             self.selection_identifier, statements[self.selection_identifier]
+        )
+
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, Replace)
+            and self.identifier == other.identifier
+            and self.selection_identifier == other.selection_identifier
         )
 
 
@@ -126,6 +180,16 @@ class MoveBefore(Move):
             type_ignores=[],
         )
 
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, MoveBefore)
+            and self.identifier == other.identifier
+            and self.selection_identifier == other.selection_identifier
+        )
+
 
 class MoveAfter(Move):
     def mutate_other(
@@ -143,8 +207,18 @@ class MoveAfter(Move):
             type_ignores=[],
         )
 
+    def __hash__(self):
+        return super().__hash__()
 
-class MoveBoth(MoveBefore, MoveAfter):
+    def __eq__(self, other):
+        return (
+            isinstance(other, MoveAfter)
+            and self.identifier == other.identifier
+            and self.selection_identifier == other.selection_identifier
+        )
+
+
+class MoveBoth(Move):
     def __init__(self, identifier: int, choices: List[int]):
         super().__init__(identifier, choices)
         self.mover = random.choice([MoveBefore, MoveAfter])
@@ -157,6 +231,17 @@ class MoveBoth(MoveBefore, MoveAfter):
         other: ast.AST,
     ):
         self.mover.mutate_other(self, mutations, statements, this, other)
+
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, MoveBoth)
+            and self.identifier == other.identifier
+            and self.selection_identifier == other.selection_identifier
+            and self.mover == other.mover
+        )
 
 
 class Swap(OtherMutationOperator):
@@ -178,6 +263,16 @@ class Swap(OtherMutationOperator):
     ):
         mutations[self.selection_identifier] = this
 
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, Swap)
+            and self.identifier == other.identifier
+            and self.selection_identifier == other.selection_identifier
+        )
+
 
 class Copy(MutationOperator):
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
@@ -187,10 +282,22 @@ class Copy(MutationOperator):
             type_ignores=[],
         )
 
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        return isinstance(other, Copy) and self.identifier == other.identifier
+
 
 class ReplaceOperand(MutationOperator):
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         pass
+
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        return False
 
 
 class ReplaceBinaryOperator(ReplaceOperand):
@@ -213,6 +320,12 @@ class Rename(MutationOperator):
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         pass
 
+    def __hash__(self):
+        return super().__hash__()
+
+    def __eq__(self, other):
+        return False
+
 
 class Mutator(ast.NodeTransformer):
     def __init__(
@@ -220,12 +333,12 @@ class Mutator(ast.NodeTransformer):
     ):
         self.statements = statements
         self.mutations = mutations
-        mutation_map = dict()
+        self.identifier_map = dict()
         for m in self.mutations:
-            m.mutate(mutation_map, self.statements)
+            m.mutate(self.identifier_map, self.statements)
         self.mutation_map = {
-            self.statements[identifier]: mutation_map[identifier]
-            for identifier in mutation_map
+            self.statements[identifier]: self.identifier_map[identifier]
+            for identifier in self.identifier_map
         }
 
     def generic_visit(self, node):
@@ -257,4 +370,4 @@ class Mutator(ast.NodeTransformer):
         return self.visit(tree)
 
     def get_mutation_indices(self) -> Set[int]:
-        return set(self.mutation_map.keys())
+        return set(self.identifier_map.keys())

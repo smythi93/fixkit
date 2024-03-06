@@ -1,7 +1,9 @@
 import ast
+import fnmatch
 import os
+import re
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pyrep.candidate import Candidate
 
@@ -11,7 +13,7 @@ class SearchError(RuntimeError):
 
 
 class StatementFinder(ast.NodeVisitor):
-    def __init__(self, src: os.PathLike):
+    def __init__(self, src: os.PathLike, excludes: Optional[List[str]] = None):
         """
         Initializes the object with the given source path and optional base path.
 
@@ -25,6 +27,7 @@ class StatementFinder(ast.NodeVisitor):
         self.files = dict()
         self.searched = False
         self.current_file = None
+        self.excludes = excludes or list()
 
     def build_candidate(self) -> Candidate:
         """
@@ -53,10 +56,11 @@ class StatementFinder(ast.NodeVisitor):
                 self._search_file(".")
             elif self.src.is_dir():
                 for directory, _, files in os.walk(self.src):
-                    for file in files:
-                        self._search_file(
-                            str(Path(directory, file).relative_to(self.src))
-                        )
+                    if not any(fnmatch.fnmatch(directory, e) for e in self.excludes):
+                        for file in files:
+                            self._search_file(
+                                str(Path(directory, file).relative_to(self.src))
+                            )
             self.searched = True
 
     def _search_file(self, file: str):
@@ -67,7 +71,11 @@ class StatementFinder(ast.NodeVisitor):
         :return: None
         """
         src = self.src / file
-        if src.is_file() and src.suffix == ".py":
+        if (
+            src.is_file()
+            and src.suffix == ".py"
+            and not any(fnmatch.fnmatch(file, e) for e in self.excludes)
+        ):
             with src.open("r") as f:
                 source = f.read()
             tree = ast.parse(source)

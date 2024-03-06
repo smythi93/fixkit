@@ -28,13 +28,13 @@ class Transformer(abc.ABC):
 
     def transform_file(self, candidate: Candidate, dst: Path, file: os.PathLike):
         if self.need_to_transform(candidate, file):
-            self.transform(candidate, dst / file)
+            self.transform(candidate, dst, file)
 
     def need_to_transform(self, candidate: Candidate, file: os.PathLike) -> bool:
         return False
 
     @abc.abstractmethod
-    def transform(self, candidate: Candidate, file: Path):
+    def transform(self, candidate: Candidate, dst: Path, file: os.PathLike):
         pass
 
     def revert(self, candidate: Candidate, file: os.PathLike):
@@ -53,7 +53,7 @@ class CopyTransformer(Transformer):
             else:
                 raise IOError("Source must be a file or directory")
 
-    def transform(self, candidate: Candidate, file: Path):
+    def transform(self, candidate: Candidate, dst: Path, file: os.PathLike):
         pass
 
 
@@ -75,7 +75,7 @@ class MutationTransformer(Transformer):
     def need_to_transform(self, candidate: Candidate, file: os.PathLike) -> bool:
         return file in self.files
 
-    def transform(self, candidate: Candidate, file: Path):
+    def transform(self, candidate: Candidate, dst: Path, file):
         tree = self.mutator.mutate(candidate.trees[file])
-        with open(file, "w") as fp:
+        with open(dst / file, "w") as fp:
             fp.write(ast.unparse(tree))

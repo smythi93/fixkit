@@ -30,11 +30,14 @@ class UniversalSelection(Selection):
     ) -> List[GeneticCandidate]:
         if len(population) <= population_size:
             return population
+        fitness = numpy.array([c.fitness for c in population], dtype=float)
+        array = numpy.empty(len(population), dtype=GeneticCandidate)
+        array[:] = population[:]
         return numpy.random.choice(
-            population,
+            array,
             size=population_size,
             replace=False,
-            p=[c.fitness for c in population],
+            p=fitness / sum(fitness),
         ).tolist()
 
 
@@ -51,8 +54,13 @@ class TournamentSelection(Selection):
         candidates = list()
         for _ in range(population_size):
             tournament = random.sample(population, k=self.tournament_size)
+            fitness = numpy.array([c.fitness for c in tournament], dtype=float)
+            array = numpy.empty(len(tournament), dtype=GeneticCandidate)
+            array[:] = tournament[:]
             choice = numpy.random.choice(
-                tournament, size=1, p=[c.fitness for c in tournament]
+                array,
+                size=1,
+                p=fitness / sum(fitness),
             )[0]
             candidates.append(choice)
             population.remove(choice)

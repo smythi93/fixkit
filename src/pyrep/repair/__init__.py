@@ -13,6 +13,7 @@ from pyrep.genetic.operators import MutationOperator
 from pyrep.localization import Localization, WeightedLocation, WeightedIdentifier
 from pyrep.normalization import normalize
 from pyrep.selection import Selection, RandomSelection
+from pyrep.stmt import StatementFinder
 
 
 class Repair(abc.ABC):
@@ -37,7 +38,7 @@ class LocalizationRepair(Repair, abc.ABC):
 class GeneticRepair(LocalizationRepair, abc.ABC):
     def __init__(
         self,
-        initial_candidate: Candidate,
+        initial_candidate: GeneticCandidate,
         fitness: Fitness,
         localization: Localization,
         population_size: int,
@@ -51,7 +52,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         out: os.PathLike = None,
     ):
         super().__init__(localization, out)
-        self.initial_candidate = GeneticCandidate.from_candidate(initial_candidate)
+        self.initial_candidate = initial_candidate
         self.population: List[GeneticCandidate] = [self.initial_candidate]
         self.choices = list(self.initial_candidate.statements.keys())
         self.fitness = Engine(fitness, workers, self.out)
@@ -66,19 +67,45 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         self.selection = selection or RandomSelection()
         self.crossover_operator = crossover_operator or OnePointCrossover()
 
+    @staticmethod
+    def get_initial_candidate(
+        src: os.PathLike, excludes: Optional[str]
+    ) -> GeneticCandidate:
+        statement_finder = StatementFinder(src=Path(src), excludes=excludes)
+        statement_finder.search_source()
+        return GeneticCandidate.from_candidate(statement_finder.build_candidate())
+
+    @staticmethod
+    @abc.abstractmethod
+    def from_source(src: os.PathLike, *args, **kwargs) -> "GeneticRepair":
+        return NotImplemented
+
     def repair(self) -> List[GeneticCandidate]:
-        self.set_suggestions(normalize(self.localize()))
-        for _ in range(self.max_generations):
-            self.iteration()
-            if max(c.fitness for c in self.population) == 1:
-                break
+        suggestions = self.localize()
+        normalize(suggestions)
+        self.set_suggestions(suggestions)
+        self.fill_population()
+        # self.filter_population()
+        self.fitness.evaluate(self.population)
+        if not self.abort():
+            for _ in range(self.max_generations):
+                self.iteration()
+                if self.abort():
+                    break
         fitness = max(c.fitness for c in self.population)
-        return [c for c in self.population if c.fitness == fitness]
+        self.population = [c for c in self.population if c.fitness == fitness]
+        self.minimize_population()
+        return self.population
+
+    def abort(self) -> bool:
+        return max(c.fitness for c in self.population) >= 1 - 1e-8
 
     def iteration(self):
-        self.population = self.select()
+        self.viable()
+        self.select()
         self.crossover_population()
         self.mutate_population()
+        # self.filter_population()
         self.fitness.evaluate(self.population)
 
     def set_suggestions(self, suggestions: List[WeightedLocation]):
@@ -91,23 +118,21 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
                     WeightedIdentifier(identifier, suggestion.weight)
                 )
 
-    def mutate_population(self):
-        for candidate in self.population[:]:
-            self.population.append(self.mutate(candidate))
+    def viable(self):
+        self.population = [c for c in self.population if c.fitness > 0]
 
-    def select(self) -> List[Candidate]:
-        return self.selection.select(self.population, self.population_size // 2)
+    def select(self):
+        self.population = self.selection.select(
+            self.population, self.population_size // 2
+        )
 
-    def mutate(self, selection: GeneticCandidate) -> GeneticCandidate:
-        candidate = selection.clone()
-        for location in self.suggestions:
-            if random.random() < location.weight and random.random() < self.w_mut:
-                candidate.mutations.append(
-                    random.choices(self.operator, weights=self.operator_weights, k=1)[
-                        0
-                    ](location.identifier, self.choices)
-                )
-        return candidate
+    def fill_population(self):
+        new_population = self.population[:]
+        while len(new_population) < self.population_size:
+            new_population.append(
+                random.choice(self.population).clone(change_gen=False)
+            )
+        self.population = new_population
 
     def crossover_population(self):
         random.shuffle(self.population)
@@ -120,8 +145,55 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
     def crossover(
         self, parent_1: Candidate, parent_2: Candidate
     ) -> Collection[Candidate]:
-        return [
-            parent_1,
-            parent_2,
-            *self.crossover_operator.crossover(parent_1, parent_2),
-        ]
+        return self.crossover_operator.crossover(parent_1, parent_2)
+
+    def mutate_population(self):
+        for candidate in self.population[:]:
+            self.population.append(self.mutate(candidate))
+
+    def mutate(self, selection: GeneticCandidate) -> GeneticCandidate:
+        candidate = selection.clone()
+        for location in self.suggestions:
+            if self.mutate_constrain(location.weight):
+                candidate.mutations.append(
+                    random.choices(self.operator, weights=self.operator_weights, k=1)[
+                        0
+                    ](location.identifier, self.choices)
+                )
+        return candidate
+
+    def mutate_constrain(self, weight: float) -> bool:
+        return random.random() < weight and random.random() < self.w_mut
+
+    def filter_population(self):
+        self.population = list(set(self.population))
+
+    def minimize_population(self):
+        self.population = [self.minimize(c) for c in self.population]
+
+    def minimize(self, candidate: GeneticCandidate) -> GeneticCandidate:
+        n = 2
+        while len(candidate) > 1:
+            start = 0
+            subset_length = len(candidate) / n
+            is_reduced = False
+
+            while start < len(candidate):
+                subset = (
+                    candidate[: int(start)] + candidate[int(start + subset_length) :]
+                )
+                new_candidate = candidate.offspring(subset, change_gen=False)
+                self.fitness.evaluate(new_candidate)
+                if new_candidate.fitness >= candidate.fitness:
+                    candidate = new_candidate
+                    n = max(n - 1, 2)
+                    is_reduced = True
+                    break
+
+                start += subset_length
+
+            if not is_reduced:
+                if n == len(candidate):
+                    break
+                n = min(n * 2, len(candidate))
+        return candidate

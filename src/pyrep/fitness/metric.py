@@ -64,6 +64,7 @@ class GenProgFitness(Fitness):
 
     def fitness(self, cwd: os.PathLike, env: Optional[Dict[str, str]] = None) -> float:
         passing, _ = self.run(cwd, env)
-        return self.w_pos_t * len(passing & self.passing) - self.w_neg_t * len(
-            passing & self.failing
-        )
+        return (
+            self.w_pos_t * len(passing & self.passing)
+            + self.w_neg_t * len(passing & self.failing)
+        ) / (self.w_pos_t * len(self.passing) + self.w_neg_t * len(self.failing))
