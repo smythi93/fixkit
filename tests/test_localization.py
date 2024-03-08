@@ -38,8 +38,8 @@ class TestLocalization(unittest.TestCase):
                 events=["line"],
                 predicates=["line"],
                 metric="Ochiai",
-                excluded_files=["t4p.py"],
-                tests=["t4p.py"],
+                excluded_files=["tests.py"],
+                tests=["tests.py"],
             )
         )
 
@@ -49,7 +49,7 @@ class TestLocalization(unittest.TestCase):
                 SUBJECTS / "middle",
                 cov="middle",
                 metric="Ochiai",
-                tests=["t4p.py"],
+                tests=["tests.py"],
             )
         )
 
