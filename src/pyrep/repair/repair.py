@@ -10,15 +10,15 @@ from typing import Collection, List, Type, Optional, Any
 
 from pyrep.candidate import Candidate, GeneticCandidate
 from pyrep.constants import DEFAULT_WORK_DIR
-from pyrep.fitness.engine import Engine
+from pyrep.fitness.engine import Tests4PyEngine, Engine
 from pyrep.fitness.metric import Fitness
 from pyrep.genetic.crossover import Crossover, OnePointCrossover
 from pyrep.genetic.minimize import MutationMinimizer, DefaultMutationMinimizer
 from pyrep.genetic.operators import MutationOperator
+from pyrep.genetic.selection import Selection, RandomSelection
 from pyrep.localization import Localization
 from pyrep.localization.location import WeightedIdentifier, WeightedLocation
 from pyrep.localization.normalization import normalize
-from pyrep.genetic.selection import Selection, RandomSelection
 from pyrep.stmt import StatementFinder
 
 
@@ -86,6 +86,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         minimizer: Optional[MutationMinimizer] = None,
         workers: int = 1,
         out: os.PathLike = None,
+        is_t4p: bool = False,
+        line_mode: bool = False,
     ):
         """
         Initialize the genetic repair.
@@ -107,7 +109,9 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         self.initial_candidate = initial_candidate
         self.population: List[GeneticCandidate] = [self.initial_candidate]
         self.choices = list(self.initial_candidate.statements.keys())
-        self.fitness = Engine(fitness, workers, self.out)
+        self.fitness = (Tests4PyEngine if is_t4p else Engine)(
+            fitness, workers, self.out
+        )
         self.population_size = population_size
         self.max_generations = max_generations
         self.w_mut = w_mut
@@ -120,18 +124,22 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         self.crossover_operator = crossover_operator or OnePointCrossover()
         self.minimizer = minimizer or DefaultMutationMinimizer()
         self.minimizer.fitness = self.fitness
+        self.line_mode = line_mode
 
     @staticmethod
     def get_initial_candidate(
-        src: os.PathLike, excludes: Optional[str]
+        src: os.PathLike, excludes: Optional[str], line_mode: bool = False
     ) -> GeneticCandidate:
         """
         Get the initial candidate from the source.
         :param os.PathLike src: The source directory of the project.
         :param Optional[List[str]] excludes: The list of files to exclude from the search.
+        :param bool line_mode: True if the line mode is enabled, False otherwise.
         :return GeneticCandidate: The initial candidate.
         """
-        statement_finder = StatementFinder(src=Path(src), excludes=excludes)
+        statement_finder = StatementFinder(
+            src=Path(src), excludes=excludes, line_mode=line_mode
+        )
         statement_finder.search_source()
         return GeneticCandidate.from_candidate(statement_finder.build_candidate())
 
@@ -157,12 +165,15 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         normalize(suggestions)
         self.set_suggestions(suggestions)
 
-        # Fill the population and evaluate the fitness.
-        self.fill_population()
+        # Evaluate the fitness for the initial candidate to reduce overhead.
         self.fitness.evaluate(self.population)
 
-        # Iterate until the maximum number of generations is reached or the fault is repaired.
         if not self.abort():
+            # Fill the population and evaluate the fitness.
+            self.fill_population()
+            self.fitness.evaluate(self.population)
+
+            # Iterate until the maximum number of generations is reached or the fault is repaired.
             for _ in range(self.max_generations):
                 self.iteration()
                 if self.abort():
@@ -204,12 +215,16 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         self.suggestions = list()
         for suggestion in suggestions:
-            for identifier in self.initial_candidate.lines[suggestion.file][
-                suggestion.line
-            ]:
-                self.suggestions.append(
-                    WeightedIdentifier(identifier, suggestion.weight)
-                )
+            if (
+                suggestion.file in self.initial_candidate.lines
+                and suggestion.line in self.initial_candidate.lines[suggestion.file]
+            ):
+                for identifier in self.initial_candidate.lines[suggestion.file][
+                    suggestion.line
+                ]:
+                    self.suggestions.append(
+                        WeightedIdentifier(identifier, suggestion.weight)
+                    )
 
     def viable(self):
         """

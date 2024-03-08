@@ -15,16 +15,16 @@ class TestFitness(unittest.TestCase):
     def test_gen_prog_fittness(self):
         fitness = GenProgFitness(
             {
-                "tests.py::MiddleTestCase::test_middle_123",
-                "tests.py::MiddleTestCase::test_middle_321",
-                "tests.py::MiddleTestCase::test_middle_335",
-                "tests.py::MiddleTestCase::test_middle_534",
-                "tests.py::MiddleTestCase::test_middle_555",
+                "t4p.py::MiddleTestCase::test_middle_123",
+                "t4p.py::MiddleTestCase::test_middle_321",
+                "t4p.py::MiddleTestCase::test_middle_335",
+                "t4p.py::MiddleTestCase::test_middle_534",
+                "t4p.py::MiddleTestCase::test_middle_555",
             },
-            {"tests.py::MiddleTestCase::test_middle_213"},
+            {"t4p.py::MiddleTestCase::test_middle_213"},
             1,
             10,
         )
         self.assertAlmostEqual(
-            1 / 3, fitness.fitness(SUBJECTS / "middle"), delta=0.000001
+            1 / 3, fitness.evaluate_fitness(SUBJECTS / "middle"), delta=0.000001
         )

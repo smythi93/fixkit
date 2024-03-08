@@ -8,9 +8,16 @@ from pathlib import Path
 DEFAULT_WORK_DIR = Path(os.getcwd(), "rep")
 SFLKIT_EVENTS_PATH = Path("sflkit_events")
 
+
+def XML_OUTPUT(name: str) -> Path:
+    return Path(DEFAULT_WORK_DIR, f"{name}.xml")
+
+
 DEFAULT_EXCLUDES = [
-    "test",
-    "tests",
+    "test/*",
+    "tests/*",
+    "test.py",
+    "tests.py",
     "setup.py",
     "env",
     "build",
@@ -31,6 +38,7 @@ DEFAULT_EXCLUDES = [
     "licenses",
     "packaging",
     "setupext.py",
+    "*tests4py*",
 ]
 
 __all__ = ["DEFAULT_EXCLUDES", "DEFAULT_WORK_DIR", "SFLKIT_EVENTS_PATH"]

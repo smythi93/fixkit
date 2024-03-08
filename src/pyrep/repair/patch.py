@@ -39,7 +39,7 @@ def get_patch(candidate: GeneticCandidate) -> str:
     """
     transformer = MutationTransformer()
     tmp = Path(DEFAULT_WORK_DIR, "patch")
-    transformer.transform_dir(candidate, tmp)
+    transformer.transform(candidate, tmp)
     patch = ""
     # Iterate over the files and generate a unified diff
     for file in transformer.files:

@@ -34,6 +34,8 @@ class PyGenProg(GeneticRepair):
         out: os.PathLike = None,
         w_pos_t: float = 1,
         w_neg_t: float = 10,
+        is_t4p: bool = False,
+        line_mode: bool = False,
     ):
         """
         Initialize the GenProg repair.
@@ -62,11 +64,13 @@ class PyGenProg(GeneticRepair):
             minimizer=DDMutationMinimizer(),
             workers=workers,
             out=out,
+            is_t4p=is_t4p,
+            line_mode=line_mode,
         )
 
-    @staticmethod
+    @classmethod
     def from_source(
-        src: os.PathLike, excludes: Optional[List[str]] = None, *args, **kwargs
+        cls, src: os.PathLike, excludes: Optional[List[str]] = None, *args, **kwargs
     ) -> "GeneticRepair":
         """
         Abstract method for creating a genetic repair from the source.
@@ -76,7 +80,7 @@ class PyGenProg(GeneticRepair):
         :param kwargs: A dictionary of keyword arguments.
         :return GeneticRepair: The genetic repair created from the source.
         """
-        return PyGenProg._from_source(src, excludes, *args, **kwargs)
+        return cls._from_source(src, excludes, *args, **kwargs)
 
     @staticmethod
     def _from_source(
@@ -91,6 +95,8 @@ class PyGenProg(GeneticRepair):
         out: os.PathLike = None,
         w_pos_t: float = 1,
         w_neg_t: float = 10,
+        is_t4p: bool = False,
+        line_mode: bool = False,
     ) -> "PyGenProg":
         """
         Create a GenProg repair from the source.
@@ -108,7 +114,7 @@ class PyGenProg(GeneticRepair):
         :return PyGenProg: The GenProg repair created from the source.
         """
         return PyGenProg(
-            initial_candidate=PyGenProg.get_initial_candidate(src, excludes),
+            initial_candidate=PyGenProg.get_initial_candidate(src, excludes, line_mode),
             localization=localization,
             population_size=population_size,
             max_generations=max_generations,
@@ -118,6 +124,8 @@ class PyGenProg(GeneticRepair):
             out=out,
             w_pos_t=w_pos_t,
             w_neg_t=w_neg_t,
+            is_t4p=is_t4p,
+            line_mode=line_mode,
         )
 
     def localize(self) -> List[WeightedLocation]:
@@ -154,6 +162,54 @@ class SingleMutationPyGenProg(PyGenProg):
             )
         )
         return candidate
+
+    @staticmethod
+    def _from_source(
+        src: os.PathLike,
+        excludes: Optional[List[str]],
+        localization: Localization,
+        population_size: int,
+        max_generations: int,
+        w_mut: float,
+        selection: Selection = None,
+        workers: int = 1,
+        out: os.PathLike = None,
+        w_pos_t: float = 1,
+        w_neg_t: float = 10,
+        is_t4p: bool = False,
+        line_mode: bool = False,
+    ) -> "SingleMutationPyGenProg":
+        """
+        Create a GenProg repair from the source.
+        :param os.PathLike src: The source directory of the project.
+        :param Optional[List[str]] excludes: The set of files to exclude from the statement search.
+        :param Localization localization: The localization to use for the repair.
+        :param int population_size: The size of the population.
+        :param int max_generations: The maximum number of generations.
+        :param float w_mut: The mutation rate, i.e., the probability of a mutation.
+        :param Selection selection: The selection operator to use for the repair.
+        :param int workers: The number of workers to use for the evaluation of the fitness.
+        :param os.PathLike out: The working directory for the repair.
+        :param float w_pos_t: The weight for the positive test cases.
+        :param float w_neg_t: The weight for the negative test cases.
+        :return SingleMutationPyGenProg: The GenProg repair created from the source.
+        """
+        return SingleMutationPyGenProg(
+            initial_candidate=SingleMutationPyGenProg.get_initial_candidate(
+                src, excludes, line_mode
+            ),
+            localization=localization,
+            population_size=population_size,
+            max_generations=max_generations,
+            w_mut=w_mut,
+            selection=selection,
+            workers=workers,
+            out=out,
+            w_pos_t=w_pos_t,
+            w_neg_t=w_neg_t,
+            is_t4p=is_t4p,
+            line_mode=line_mode,
+        )
 
 
 __all__ = ["PyGenProg", "SingleMutationPyGenProg"]

@@ -68,13 +68,25 @@ class Fitness(abc.ABC):
         except subprocess.TimeoutExpired:
             return set(), set()
 
-    @abc.abstractmethod
-    def fitness(self, cwd: os.PathLike, env: Optional[Dict[str, str]] = None) -> float:
+    def evaluate_fitness(
+        self, cwd: os.PathLike, env: Optional[Dict[str, str]] = None
+    ) -> float:
         """
         Abstract method to evaluate the fitness of a candidate in the directory given by cwd with the provided
         :param os.PathLike cwd: The directory to evaluate the fitness in.
         :param Optional[Dict[str, str]] env: The environment to evaluate the fitness in.
         :return float: The fitness of the candidate in the directory.
+        """
+        passing, failing = self.run(cwd, env)
+        return self.fitness(passing, failing)
+
+    @abc.abstractmethod
+    def fitness(self, passing: Set[str], failing: Set[str]) -> float:
+        """
+        Abstract method to evaluate the fitness of a candidate in the directory given by cwd with the provided
+        :param Set[str] passing: The set of passing tests.
+        :param Set[str] failing: The set of failing tests.
+        :return float: The fitness of the candidate based on the sets of passing and failing tests.
         """
         pass
 
@@ -100,15 +112,14 @@ class GenProgFitness(Fitness):
         self.w_pos_t = w_pos_t
         self.w_neg_t = w_neg_t
 
-    def fitness(self, cwd: os.PathLike, env: Optional[Dict[str, str]] = None) -> float:
+    def fitness(self, passing: Set[str], failing: Set[str]) -> float:
         """
         Evaluate the fitness of a candidate in the directory given by cwd with the provided environment based on the
         GenProg fitness w_pos_t * |{t in passing tests | C passes t}| + w_neg_t * |{t in failing tests | C passes t}|.
-        :param os.PathLike cwd: The directory to evaluate the fitness in.
-        :param Optional[Dict[str, str]] env: The environment to evaluate the fitness in.
-        :return float: The fitness of the candidate in the directory.
+        :param Set[str] passing: The set of passing tests.
+        :param Set[str] failing: The set of failing tests.
+        :return float: The fitness of the candidate based on the sets of passing and failing tests.
         """
-        passing, _ = self.run(cwd, env)
         return (
             self.w_pos_t * len(passing & self.passing)
             + self.w_neg_t * len(passing & self.failing)

@@ -203,5 +203,13 @@ class GeneticCandidate(Candidate):
             and self.mutations == other.mutations
         )
 
+    def __contains__(self, item):
+        """
+        Return True if the item is in the mutations list, False otherwise.
+        :param item: The item to check.
+        :return bool: True if the item is in the mutations list, False otherwise.
+        """
+        return item in self.mutations
+
 
 __all__ = ["Candidate", "GeneticCandidate"]
