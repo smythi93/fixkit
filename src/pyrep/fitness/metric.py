@@ -54,10 +54,6 @@ class Fitness(abc.ABC):
                 stderr=subprocess.PIPE,
                 timeout=self.timeout,
             )
-
-            raise ValueError(
-                process.stdout.decode("utf-8"), process.stderr.decode("utf-8")
-            )
             # Parse the results and return the passing and failing tests.
             passing = set()
             failing = set()

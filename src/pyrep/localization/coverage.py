@@ -64,6 +64,7 @@ class CoverageLocalization(Localization):
                 "python",
                 "-m",
                 "pytest",
+                f"--rootdir={self.out}",
                 "--cov",
                 self.cov,
                 "--cov-context",

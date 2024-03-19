@@ -28,6 +28,7 @@ class TestRepair(unittest.TestCase):
                 cov="middle",
                 metric="Ochiai",
                 tests=["tests.py"],
+                out=REP,
             ),
             population_size=40,
             max_generations=10,

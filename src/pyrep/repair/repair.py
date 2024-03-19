@@ -172,8 +172,6 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         # Evaluate the fitness for the initial candidate to reduce overhead.
         LOGGER.info("Evaluating the fitness for the initial candidate.")
         self.fitness.evaluate(self.population)
-        if self.population[0].fitness == 0:
-            raise ValueError("The initial candidate does not pass any test.")
 
         if not self.abort():
             # Fill the population and evaluate the fitness.
@@ -256,7 +254,10 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         Filter the population to keep only viable candidates whose fitness is greater than 0.
         """
         self.population = [c for c in self.population if c.fitness > 0]
-
+        if not self.population:
+            LOGGER.info("No viable candidates, start with new population.")
+            self.population = [self.initial_candidate]
+            self.fill_population()
     def select(self):
         """
         Select the best candidates from the population for the next generation.

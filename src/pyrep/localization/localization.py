@@ -50,7 +50,7 @@ class Localization(abc.ABC):
         self.failing = set(failing or [])
         self.passing = set(passing or [])
         self.tests = set(tests or [])
-        self.out = Path(out) if out else DEFAULT_WORK_DIR / "localization"
+        self.out = Path(out or DEFAULT_WORK_DIR, "localization")
         self.prepared = False
         self.env = env or os.environ
         self.metric = None
