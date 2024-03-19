@@ -25,7 +25,7 @@ def write_patches(
     file_format = f"{{:0{len(str(len(candidates)))}d}}.patch"
     # Iterate over the candidates and generate patches
     for i, candidate in enumerate(candidates, start=1):
-        patch = get_patch(candidate)
+        patch = get_patch(candidate, out=out)
         # Write the patch to a file
         with (patches / file_format.format(i)).open("w") as patch_file:
             patch_file.write(patch)
