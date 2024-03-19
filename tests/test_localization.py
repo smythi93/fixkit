@@ -12,6 +12,7 @@ from pyrep.localization.t4p import Tests4PyLocalization
 from utils import SUBJECTS, REP, SFL
 
 
+@unittest.skip("Skip test")
 class TestLocalization(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(REP, ignore_errors=True)

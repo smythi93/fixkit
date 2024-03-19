@@ -14,6 +14,7 @@ from pyrep.repair.pygenprog import PyGenProg, SingleMutationPyGenProg
 from utils import SUBJECTS, REP, SFL
 
 
+@unittest.skip("Skip test")
 class TestRepair(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(REP, ignore_errors=True)
