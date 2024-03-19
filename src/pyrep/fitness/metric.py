@@ -37,6 +37,7 @@ class Fitness(abc.ABC):
         :return Tuple[Set[str], Set[str]]: A tuple of the passing and failing tests.
         """
         tests = list(self.passing | self.failing)
+        print(tests)
         try:
             # Run the tests and get the results.
             subprocess.run(
@@ -59,11 +60,14 @@ class Fitness(abc.ABC):
             cwd = Path(cwd)
             with open(cwd / ".report.json") as fp:
                 results = json.load(fp)
+            print(results)
             for result in results["tests"]:
                 if result["outcome"] == "passed":
                     passing.add(result["nodeid"])
                 else:
                     failing.add(result["nodeid"])
+            print(passing)
+            print(failing)
             return passing, failing
         except subprocess.TimeoutExpired:
             return set(), set()
