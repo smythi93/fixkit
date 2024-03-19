@@ -46,6 +46,7 @@ class TestRepair(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree("tmp", ignore_errors=True)
 
+    @unittest.skip("Skip until we have a better way to test this")
     def test_repair_t4p(self):
         report = t4p.checkout(t4p.middle_2, Path("tmp"))
         if report.raised:

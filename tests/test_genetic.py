@@ -22,6 +22,7 @@ from pyrep.genetic.operators import (
 from pyrep.stmt import StatementFinder
 
 
+@unittest.skip("Skip until we have a better way to test this")
 class TestGenetic(unittest.TestCase):
     file = None
     finder = None

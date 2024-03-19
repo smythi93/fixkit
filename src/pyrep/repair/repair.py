@@ -111,7 +111,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         self.population: List[GeneticCandidate] = [self.initial_candidate]
         self.choices = list(self.initial_candidate.statements.keys())
         self.fitness = (Tests4PyEngine if is_t4p else Engine)(
-            fitness, workers, self.out
+            fitness=fitness, workers=workers, out=self.out
         )
         self.population_size = population_size
         self.max_generations = max_generations
@@ -172,6 +172,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         # Evaluate the fitness for the initial candidate to reduce overhead.
         LOGGER.info("Evaluating the fitness for the initial candidate.")
         self.fitness.evaluate(self.population)
+        if self.population[0].fitness == 0:
+            raise ValueError("The initial candidate does not pass any test.")
 
         if not self.abort():
             # Fill the population and evaluate the fitness.

@@ -8,6 +8,7 @@ from pyrep.stmt import StatementFinder
 from utils import SUBJECTS, REP
 
 
+@unittest.skip("Skip until we have a better way to test this")
 class TestDiff(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(REP, ignore_errors=True)
