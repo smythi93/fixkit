@@ -65,6 +65,7 @@ class Fitness(abc.ABC):
                     passing.add(result["nodeid"])
                 else:
                     failing.add(result["nodeid"])
+            print(passing, failing)
             return passing, failing
         except subprocess.TimeoutExpired:
             return set(), set()
