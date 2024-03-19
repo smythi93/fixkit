@@ -6,7 +6,6 @@ from pyrep.fitness.metric import GenProgFitness
 from utils import SUBJECTS, REP
 
 
-@unittest.skip("Skip until we have a better way to test this")
 class TestFitness(unittest.TestCase):
     def tearDown(self):
         try:

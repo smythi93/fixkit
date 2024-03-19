@@ -22,7 +22,6 @@ from pyrep.genetic.operators import (
 from pyrep.stmt import StatementFinder
 
 
-@unittest.skip("Skip until we have a better way to test this")
 class TestGenetic(unittest.TestCase):
     file = None
     finder = None
@@ -182,7 +181,6 @@ class TestMutations(TestGenetic):
         self.verify_assign(module_1.body[1], "z", 3)
 
 
-@unittest.skip("Skip until we have a better way to test this")
 class TestCrossover(TestGenetic):
     def _test_with_seed(self, seed: int):
         px = self.candidate.clone()
@@ -217,7 +215,6 @@ class TestCrossover(TestGenetic):
         self.assertEqual(py.mutations + px.mutations, cy.mutations)
 
 
-@unittest.skip("Skip until we have a better way to test this")
 class TestEquality(unittest.TestCase):
     def test_equal(self):
         tests = [
