@@ -22,7 +22,7 @@ class TestRepair(unittest.TestCase):
     def test_repair_middle(self):
         repair = PyGenProg.from_source(
             src=SUBJECTS / "middle",
-            excludes=["t4p.py"],
+            excludes=["tests.py"],
             localization=CoverageLocalization(
                 SUBJECTS / "middle",
                 cov="middle",
