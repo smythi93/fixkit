@@ -1,8 +1,9 @@
 import os
+import shutil
 import unittest
 
 from pyrep.fitness.metric import GenProgFitness
-from utils import SUBJECTS
+from utils import SUBJECTS, REP
 
 
 class TestFitness(unittest.TestCase):
@@ -11,6 +12,7 @@ class TestFitness(unittest.TestCase):
             os.remove(SUBJECTS / "middle" / ".report.json")
         except OSError:
             pass
+        shutil.rmtree(REP, ignore_errors=True)
 
     def test_gen_prog_fittness(self):
         fitness = GenProgFitness(
