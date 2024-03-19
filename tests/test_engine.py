@@ -83,6 +83,5 @@ class TestTest4PyEngine(unittest.TestCase):
     def test_engine_1(self):
         self.run_test(1)
 
-    @unittest.skip("Skip test")
-    def test_engine_5(self):
+        def test_engine_5(self):
         self.run_test(5)
