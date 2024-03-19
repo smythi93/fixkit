@@ -19,6 +19,7 @@ from pyrep.genetic.selection import Selection, RandomSelection
 from pyrep.localization import Localization
 from pyrep.localization.location import WeightedIdentifier, WeightedLocation
 from pyrep.localization.normalization import normalize
+from pyrep.logger import LOGGER
 from pyrep.stmt import StatementFinder
 
 
@@ -137,10 +138,12 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         :param bool line_mode: True if the line mode is enabled, False otherwise.
         :return GeneticCandidate: The initial candidate.
         """
+        LOGGER.info("Searching for statements in the source.")
         statement_finder = StatementFinder(
             src=Path(src), excludes=excludes, line_mode=line_mode
         )
         statement_finder.search_source()
+        LOGGER.info("Building the initial candidate.")
         return GeneticCandidate.from_candidate(statement_finder.build_candidate())
 
     @staticmethod
@@ -161,29 +164,45 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         :return List[GeneticCandidate]: The list of candidates that repair (or perform best) the fault.
         """
         # Localize the faults.
+        LOGGER.info("Localizing the faulty code locations.")
         suggestions = self.localize()
         normalize(suggestions)
         self.set_suggestions(suggestions)
 
         # Evaluate the fitness for the initial candidate to reduce overhead.
+        LOGGER.info("Evaluating the fitness for the initial candidate.")
         self.fitness.evaluate(self.population)
 
         if not self.abort():
             # Fill the population and evaluate the fitness.
+            LOGGER.info(
+                "Filling the population and evaluating the fitness of each candidate."
+            )
             self.fill_population()
             self.fitness.evaluate(self.population)
 
             # Iterate until the maximum number of generations is reached or the fault is repaired.
-            for _ in range(self.max_generations):
+            for gen in range(self.max_generations):
+                LOGGER.info(f"Generation {gen + 1}/{self.max_generations}:")
                 self.iteration()
                 if self.abort():
+                    LOGGER.info("Found a repair for the fault.")
                     break
+            else:
+                LOGGER.info(
+                    "Reached the maximum number of generations without finding an appropriate repair."
+                )
+        else:
+            LOGGER.info("The fault is already repaired.")
 
         # Minimize the population and return the best candidates.
         fitness = max(c.fitness for c in self.population)
+        LOGGER.info("The best candidate has a fitness of {:.2f}.", fitness)
         self.population = [c for c in self.population if c.fitness == fitness]
         self.filter_population()
+        LOGGER.info("Minimize the best candidates.")
         self.population = self.minimizer.minimize(self.population)
+        LOGGER.info("Found {} possible repairs.", len(self.population))
         return self.population
 
     def abort(self) -> bool:
@@ -198,14 +217,18 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         Perform an iteration of the genetic programming.
         """
         # Filter the population and select the best candidates.
+        LOGGER.info("Filtering the population and selecting the best candidates.")
         self.viable()
         self.select()
 
         # Crossover and mutate the population.
+        LOGGER.info("Crossover the population.")
         self.crossover_population()
+        LOGGER.info("Mutate the population.")
         self.mutate_population()
 
         # Evaluate the fitness for the population.
+        LOGGER.info("Evaluate the fitness for the population.")
         self.fitness.evaluate(self.population)
 
     def set_suggestions(self, suggestions: List[WeightedLocation]):

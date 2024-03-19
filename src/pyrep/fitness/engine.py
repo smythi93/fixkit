@@ -117,6 +117,23 @@ class Tests4PyWorker(Worker):
     Worker class to evaluate the fitness of a candidate using Tests4Py.
     """
 
+    def __init__(
+        self,
+        identifier: str,
+        pre_calculated: Dict[Tuple[MutationOperator], float],
+        out: os.PathLike = None,
+        raise_on_failure: bool = False,
+    ):
+        """
+        Initialize the worker.
+        :param str identifier: The identifier of the worker. Is used to create a directory for the worker.
+        :param Dict[Tuple[MutationOperator], float] pre_calculated: The pre-calculated fitness values shared between
+        all workers.
+        :param os.PathLike out: The output directory for the worker.
+        """
+        super().__init__(identifier, pre_calculated, out)
+        self.raise_on_failure = raise_on_failure
+
     def evaluate(self, candidate: GeneticCandidate, fitness: Fitness):
         """
         Evaluate the fitness of a candidate using Tests4Py.
@@ -131,6 +148,8 @@ class Tests4PyWorker(Worker):
             report = t4p.build(self.cwd)
             if report.raised:
                 candidate.fitness = 0
+                if self.raise_on_failure:
+                    raise report.raised
             else:
                 report = t4p.test(
                     self.cwd,
@@ -139,6 +158,8 @@ class Tests4PyWorker(Worker):
                 )
                 if report.raised:
                     candidate.fitness = 0
+                    if self.raise_on_failure:
+                        raise report.raised
                 else:
                     passing, failing = set(), set()
                     for test, result in report.results:
@@ -160,16 +181,18 @@ class Tests4PyEngine(Engine):
         fitness: Fitness,
         workers: int = 1,
         out: os.PathLike = None,
+        raise_on_failure: bool = False,
     ):
         """
         Initialize the engine.
         :param Fitness fitness: The fitness function to use.
         :param int workers: The number of workers to use.
         :param os.PathLike out: The output directory for the workers.
+        :param bool raise_on_failure: Whether to raise an exception if a worker fails.
         """
         super().__init__(fitness, workers, out)
         self.workers = [
-            Tests4PyWorker(f"rep_{i}", self.pre_calculated, self.out)
+            Tests4PyWorker(f"rep_{i}", self.pre_calculated, self.out, raise_on_failure)
             for i in range(workers)
         ]
 
