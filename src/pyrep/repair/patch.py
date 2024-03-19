@@ -31,14 +31,15 @@ def write_patches(
             patch_file.write(patch)
 
 
-def get_patch(candidate: GeneticCandidate) -> str:
+def get_patch(candidate: GeneticCandidate, out: Optional[os.PathLike] = None) -> str:
     """
     Generate a patch from a candidate.
     :param GeneticCandidate candidate: The candidate to generate a patch from.
+    :param Optional[os.PathLike] out: The output directory for the patch.
     :return str: The patch generated from the candidate.
     """
     transformer = MutationTransformer()
-    tmp = Path(DEFAULT_WORK_DIR, "patch")
+    tmp = Path(out or DEFAULT_WORK_DIR, "patch")
     transformer.transform(candidate, tmp)
     patch = ""
     # Iterate over the files and generate a unified diff

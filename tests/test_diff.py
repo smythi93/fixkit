@@ -18,7 +18,7 @@ class TestDiff(unittest.TestCase):
         finder.search_source()
         candidate = GeneticCandidate.from_candidate(finder.build_candidate())
         candidate.mutations = [Replace(5, [9])]
-        patch = get_patch(candidate)
+        patch = get_patch(candidate, out=REP)
         self.assertEqual(
             "--- middle.py\n"
             "+++ middle.py\n"

@@ -41,6 +41,7 @@ class TestLocalization(unittest.TestCase):
                 metric="Ochiai",
                 excluded_files=["tests.py"],
                 tests=["tests.py"],
+                out=REP,
             )
         )
 
@@ -51,6 +52,7 @@ class TestLocalization(unittest.TestCase):
                 cov="middle",
                 metric="Ochiai",
                 tests=["tests.py"],
+                out=REP,
             )
         )
 

@@ -145,9 +145,6 @@ class Tests4PyWorker(Worker):
             candidate.fitness = self.pre_calculated[key]
         else:
             self.transformer.transform(candidate, self.cwd)
-            raise ValueError(
-                str(os.listdir(candidate.src)) + "\n\n" + str(os.listdir(self.cwd))
-            )
             report = t4p.build(self.cwd)
             if report.raised:
                 candidate.fitness = 0

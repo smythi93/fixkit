@@ -34,6 +34,7 @@ class TestRepair(unittest.TestCase):
             max_generations=10,
             w_mut=0.06,
             workers=16,
+            out=REP,
         )
         random.seed(6)
         patches = repair.repair()
@@ -65,6 +66,7 @@ class TestRepair(unittest.TestCase):
             workers=10,
             is_t4p=True,
             line_mode=True,
+            out=REP,
         )
         repair.operator = [Replace]
         repair.operator_weights = [1]
