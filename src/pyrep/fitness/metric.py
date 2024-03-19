@@ -60,12 +60,12 @@ class Fitness(abc.ABC):
             cwd = Path(cwd)
             with open(cwd / ".report.json") as fp:
                 results = json.load(fp)
+            raise ValueError(results)
             for result in results["tests"]:
                 if result["outcome"] == "passed":
                     passing.add(result["nodeid"])
                 else:
                     failing.add(result["nodeid"])
-            raise ValueError(passing, failing)
             return passing, failing
         except subprocess.TimeoutExpired:
             return set(), set()
