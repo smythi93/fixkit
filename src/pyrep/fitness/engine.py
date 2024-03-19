@@ -167,6 +167,7 @@ class Tests4PyWorker(Worker):
                             passing.add(test)
                         elif result == TestResult.FAILING:
                             failing.add(test)
+                    raise ValueError(str(passing) + "\n\n" + str(failing))
                     candidate.fitness = fitness.fitness(passing, failing)
             self.pre_calculated[key] = candidate.fitness
 
