@@ -258,6 +258,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
             LOGGER.info("No viable candidates, start with new population.")
             self.population = [self.initial_candidate]
             self.fill_population()
+
     def select(self):
         """
         Select the best candidates from the population for the next generation.
