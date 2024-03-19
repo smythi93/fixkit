@@ -33,7 +33,7 @@ class TestEngine(unittest.TestCase):
             candidates.append(GeneticCandidate(SUBJECTS / "middle"))
         for candidate in candidates:
             self.assertAlmostEqual(0, candidate.fitness, delta=0.000001)
-        engine = Engine(fitness, workers)
+        engine = Engine(fitness, workers, out=REP)
         engine.evaluate(candidates)
         for candidate in candidates:
             self.assertAlmostEqual(1 / 3, candidate.fitness, delta=0.000001)
@@ -76,9 +76,7 @@ class TestTest4PyEngine(unittest.TestCase):
             candidates.append(GeneticCandidate(Path("tmp", "middle_2")))
         for candidate in candidates:
             self.assertAlmostEqual(0, candidate.fitness, delta=0.000001)
-        if os.path.exists(REP):
-            raise RuntimeError("REP exists")
-        engine = Tests4PyEngine(fitness, workers, raise_on_failure=True)
+        engine = Tests4PyEngine(fitness, workers, out=REP, raise_on_failure=True)
         engine.evaluate(candidates)
         for candidate in candidates:
             self.assertAlmostEqual(1 / 3, candidate.fitness, delta=0.000001)
