@@ -10,7 +10,6 @@ from pyrep.fitness.metric import GenProgFitness
 from utils import SUBJECTS, REP, SFL
 
 
-@unittest.skip("Skip test")
 class TestEngine(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(REP, ignore_errors=True)
@@ -45,7 +44,6 @@ class TestEngine(unittest.TestCase):
         self.run_test(5)
 
 
-@unittest.skip("Skip test")
 class TestTest4PyEngine(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(REP, ignore_errors=True)
