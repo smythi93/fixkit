@@ -11,12 +11,13 @@ from pyrep.localization.coverage import CoverageLocalization
 from pyrep.localization.t4p import Tests4PyLocalization
 from pyrep.repair.patch import write_patches
 from pyrep.repair.pygenprog import PyGenProg, SingleMutationPyGenProg
-from utils import SUBJECTS, REP
+from utils import SUBJECTS, REP, SFL
 
 
 class TestRepair(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(REP, ignore_errors=True)
+        shutil.rmtree(SFL, ignore_errors=True)
 
     def test_repair_middle(self):
         repair = PyGenProg.from_source(

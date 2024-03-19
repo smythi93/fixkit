@@ -13,7 +13,7 @@ class TestDiff(unittest.TestCase):
         shutil.rmtree(REP, ignore_errors=True)
 
     def test_diff(self):
-        finder = StatementFinder(SUBJECTS / "middle", excludes=["t4p.py"])
+        finder = StatementFinder(SUBJECTS / "middle", excludes=["tests.py"])
         finder.search_source()
         candidate = GeneticCandidate.from_candidate(finder.build_candidate())
         candidate.mutations = [Replace(5, [9])]
