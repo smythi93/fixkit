@@ -32,6 +32,7 @@ dependencies = [
     "pytest-json-report>=1.5.0",
     "coverage>=7.4.3",
     "numpy>=1.26.4",
+    "tests4py @ git+https://github.com/smythi93/Tests4Py@52c175fb772eac13bd7e7a85f9945fb1a9ec2a91",
 ]
 
 [project.urls]

@@ -17,7 +17,7 @@ class Transformer(abc.ABC):
     Abstract class for transformation operators.
     """
 
-    def transform_dir(self, candidate: Candidate, dst: os.PathLike):
+    def transform(self, candidate: Candidate, dst: os.PathLike):
         """
         Transform a directory to match a candidate.
         :param Candidate candidate: The candidate to match.
@@ -35,19 +35,29 @@ class Transformer(abc.ABC):
         if dst.is_file():
             self.transform_file(candidate, Path(".."), dst)
         elif dst.is_dir():
-            for directory, _, files in os.walk(dst):
-                for file in files:
-                    self.transform_file(candidate, dst, file)
+            self.transform_dir(candidate, dst)
+
+    def transform_dir(self, candidate: Candidate, dst: Path):
+        """
+        Transform a directory to match a candidate.
+        :param Candidate candidate: The candidate to match.
+        :param Path dst: The destination directory to transform.
+        """
+        for directory, _, files in os.walk(dst):
+            base = Path(directory).relative_to(dst)
+            for file in files:
+                file = str(base / file)
+                self.transform_file(candidate, dst, file)
 
     def transform_file(self, candidate: Candidate, dst: Path, file: os.PathLike):
         """
         Transform a file to match a candidate.
         :param Candidate candidate: The candidate to match.
-        :param os.PathLike dst: The destination directory to transform.
+        :param Path dst: The destination directory to transform.
         :param os.PathLike file: The file to transform.
         """
         if self.need_to_transform(candidate, file):
-            self.transform(candidate, dst, file)
+            self._transform_file(candidate, dst, file)
 
     def need_to_transform(self, candidate: Candidate, file: os.PathLike) -> bool:
         """
@@ -59,7 +69,7 @@ class Transformer(abc.ABC):
         return False
 
     @abc.abstractmethod
-    def transform(self, candidate: Candidate, dst: Path, file: os.PathLike):
+    def _transform_file(self, candidate: Candidate, dst: Path, file: os.PathLike):
         """
         Transform a file to match a candidate.
         :param Candidate candidate: The candidate to match.
@@ -85,7 +95,7 @@ class CopyTransformer(Transformer):
     Transformer that copies the source directory to the destination directory.
     """
 
-    def transform_dir(self, candidate: Candidate, dst: os.PathLike):
+    def transform(self, candidate: Candidate, dst: os.PathLike):
         """
         Transform a directory to match a candidate by copying the source directory to the destination directory.
         :param Candidate candidate: The candidate to match.
@@ -101,7 +111,7 @@ class CopyTransformer(Transformer):
             else:
                 raise IOError("Source must be a file or directory")
 
-    def transform(self, candidate: Candidate, dst: Path, file: os.PathLike):
+    def _transform_file(self, candidate: Candidate, dst: Path, file: os.PathLike):
         pass
 
 
@@ -117,7 +127,7 @@ class MutationTransformer(Transformer):
         self.mutator = None
         self.files = set()
 
-    def transform_dir(self, candidate: GeneticCandidate, dst: os.PathLike):
+    def transform(self, candidate: GeneticCandidate, dst: os.PathLike):
         """
         Transform a directory to match a candidate by mutating the source directory to the destination directory.
         :param GeneticCandidate candidate: The candidate to match.
@@ -130,7 +140,16 @@ class MutationTransformer(Transformer):
         self.files = {candidate.files[i] for i in self.mutator.get_mutation_indices()}
         for file in last_files - self.files:
             self.revert(candidate, dst, file)
-        super().transform_dir(candidate, dst)
+        super().transform(candidate, dst)
+
+    def transform_dir(self, candidate: Candidate, dst: Path):
+        """
+        Transform a directory to match a candidate by mutating the source directory to the destination directory.
+        :param Candidate candidate: The candidate to match.
+        :param Path dst: The destination directory to transform.
+        """
+        for file in self.files:
+            self._transform_file(candidate, dst, file)
 
     def need_to_transform(self, candidate: Candidate, file: os.PathLike) -> bool:
         """
@@ -141,7 +160,7 @@ class MutationTransformer(Transformer):
         """
         return file in self.files
 
-    def transform(self, candidate: Candidate, dst: Path, file: os.PathLike):
+    def _transform_file(self, candidate: Candidate, dst: Path, file: os.PathLike):
         """
         Transform a file to match a candidate by mutating the file.
         :param Candidate candidate: The candidate to match.

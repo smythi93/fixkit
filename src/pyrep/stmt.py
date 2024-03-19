@@ -21,7 +21,12 @@ class SearchError(RuntimeError):
 
 
 class StatementFinder(ast.NodeVisitor):
-    def __init__(self, src: os.PathLike, excludes: Optional[List[str]] = None):
+    def __init__(
+        self,
+        src: os.PathLike,
+        excludes: Optional[List[str]] = None,
+        line_mode: bool = False,
+    ):
         """
         Initialize the StatementFinder with the given source path and optional excludes.
         :param os.PathLike src: The source path to search.
@@ -36,6 +41,7 @@ class StatementFinder(ast.NodeVisitor):
         self.searched = False
         self.current_file = None
         self.excludes = excludes or list()
+        self.line_mode = line_mode
 
     def build_candidate(self) -> Candidate:
         """
@@ -87,12 +93,22 @@ class StatementFinder(ast.NodeVisitor):
             self.current_file = file
             self.visit(tree)
 
+    def check(self, node: ast.AST):
+        """
+        This function checks if the node is a statement.
+        :param ast.AST node: The node to be checked.
+        """
+        if self.line_mode:
+            return isinstance(node, ast.stmt) and not hasattr(node, "body")
+        else:
+            return isinstance(node, ast.stmt)
+
     def generic_visit(self, node: ast.AST):
         """
         This function collects the statements and assigns an identifier to each statement.
         :param ast.AST node: The node to be visited.
         """
-        if isinstance(node, ast.stmt):
+        if self.check(node):
             identifier = self.next_identifier()
             self.statements[identifier] = node
             self.files[identifier] = self.current_file

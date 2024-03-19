@@ -25,21 +25,22 @@ def write_patches(
     file_format = f"{{:0{len(str(len(candidates)))}d}}.patch"
     # Iterate over the candidates and generate patches
     for i, candidate in enumerate(candidates, start=1):
-        patch = get_patch(candidate)
+        patch = get_patch(candidate, out=out)
         # Write the patch to a file
         with (patches / file_format.format(i)).open("w") as patch_file:
             patch_file.write(patch)
 
 
-def get_patch(candidate: GeneticCandidate) -> str:
+def get_patch(candidate: GeneticCandidate, out: Optional[os.PathLike] = None) -> str:
     """
     Generate a patch from a candidate.
     :param GeneticCandidate candidate: The candidate to generate a patch from.
+    :param Optional[os.PathLike] out: The output directory for the patch.
     :return str: The patch generated from the candidate.
     """
     transformer = MutationTransformer()
-    tmp = Path(DEFAULT_WORK_DIR, "patch")
-    transformer.transform_dir(candidate, tmp)
+    tmp = Path(out or DEFAULT_WORK_DIR, "patch")
+    transformer.transform(candidate, tmp)
     patch = ""
     # Iterate over the files and generate a unified diff
     for file in transformer.files:
