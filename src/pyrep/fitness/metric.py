@@ -39,7 +39,7 @@ class Fitness(abc.ABC):
         tests = list(self.passing | self.failing)
         try:
             # Run the tests and get the results.
-            subprocess.run(
+            process = subprocess.run(
                 [
                     "python",
                     "-m",
@@ -54,13 +54,16 @@ class Fitness(abc.ABC):
                 stderr=subprocess.PIPE,
                 timeout=self.timeout,
             )
+
+            raise ValueError(
+                process.stdout.decode("utf-8"), process.stderr.decode("utf-8")
+            )
             # Parse the results and return the passing and failing tests.
             passing = set()
             failing = set()
             cwd = Path(cwd)
             with open(cwd / ".report.json") as fp:
                 results = json.load(fp)
-            raise ValueError(results)
             for result in results["tests"]:
                 if result["outcome"] == "passed":
                     passing.add(result["nodeid"])
