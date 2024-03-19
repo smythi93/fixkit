@@ -75,7 +75,6 @@ class TestTest4PyEngine(unittest.TestCase):
             candidates.append(GeneticCandidate(Path("tmp", "middle_2")))
         for candidate in candidates:
             self.assertAlmostEqual(0, candidate.fitness, delta=0.000001)
-        t4p.utils.load_project(Path("tmp", "middle_2"))
         engine = Tests4PyEngine(fitness, workers, raise_on_failure=True)
         engine.evaluate(candidates)
         for candidate in candidates:
