@@ -40,8 +40,8 @@ class TestRepair(unittest.TestCase):
         patches = repair.repair()
         self.assertEqual(1, len(patches))
         self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
-        write_patches(patches)
-        self.assertTrue(Path(DEFAULT_WORK_DIR / "patches" / "1.patch").exists())
+        write_patches(patches, out=REP)
+        self.assertTrue((REP / "patches" / "1.patch").exists())
 
     @classmethod
     def tearDownClass(cls):
@@ -74,5 +74,5 @@ class TestRepair(unittest.TestCase):
         patches = repair.repair()
         self.assertEqual(1, len(patches))
         self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
-        write_patches(patches)
-        self.assertTrue(Path(DEFAULT_WORK_DIR / "patches" / "1.patch").exists())
+        write_patches(patches, out=REP)
+        self.assertTrue((REP / "patches" / "1.patch").exists())
