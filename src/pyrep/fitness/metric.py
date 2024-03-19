@@ -39,12 +39,12 @@ class Fitness(abc.ABC):
         tests = list(self.passing | self.failing)
         try:
             # Run the tests and get the results.
-            print(cwd)
             subprocess.run(
                 [
                     "python",
                     "-m",
                     "pytest",
+                    f"--rootdir={cwd}",
                     "--json-report",
                 ]
                 + tests,
@@ -65,6 +65,7 @@ class Fitness(abc.ABC):
                     passing.add(result["nodeid"])
                 else:
                     failing.add(result["nodeid"])
+            print(passing, failing)
             return passing, failing
         except subprocess.TimeoutExpired:
             return set(), set()
