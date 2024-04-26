@@ -10,7 +10,7 @@ from typing import Collection, List, Type, Optional, Any
 
 from pyrep.candidate import Candidate, GeneticCandidate
 from pyrep.constants import DEFAULT_WORK_DIR
-from pyrep.fitness.engine import Tests4PyEngine, Engine
+from pyrep.fitness.engine import Tests4PyEngine, Engine, Tests4PySystemTestEngine
 from pyrep.fitness.metric import Fitness
 from pyrep.genetic.crossover import Crossover, OnePointCrossover
 from pyrep.genetic.minimize import MutationMinimizer, DefaultMutationMinimizer
@@ -88,6 +88,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         workers: int = 1,
         out: os.PathLike = None,
         is_t4p: bool = False,
+        is_system_test: bool = False,
+        system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
     ):
         """
@@ -105,14 +107,29 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         :param Crossover crossover_operator: The crossover operator to use for the repair.
         :param int workers: The number of workers to use for the evaluation of the fitness.
         :param os.PathLike out: The working directory for the repair.
+        :param bool is_t4p: True if the repair is using Tests4Py, False otherwise.
+        :param bool is_system_test: True if the repair is using system tests, False otherwise.
+        :param os.PathLike | List[os.PathLike] system_tests: The system tests to use for the repair. This argument is
+        only considered when is_system_test is True.
+        :param bool line_mode: True if the line mode is enabled, False otherwise.
         """
         super().__init__(localization, out)
         self.initial_candidate = initial_candidate
         self.population: List[GeneticCandidate] = [self.initial_candidate]
         self.choices = list(self.initial_candidate.statements.keys())
-        self.fitness = (Tests4PyEngine if is_t4p else Engine)(
-            fitness=fitness, workers=workers, out=self.out
-        )
+        if is_t4p:
+            if system_tests:
+                if system_tests is None:
+                    raise ValueError("System tests must be provided.")
+                self.fitness = Tests4PySystemTestEngine(
+                    fitness=fitness, tests=system_tests, workers=workers, out=self.out
+                )
+            else:
+                self.fitness = Tests4PyEngine(
+                    fitness=fitness, workers=workers, out=self.out
+                )
+        else:
+            self.fitness = Engine(fitness=fitness, workers=workers, out=self.out)
         self.population_size = population_size
         self.max_generations = max_generations
         self.w_mut = w_mut
