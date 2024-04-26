@@ -9,6 +9,7 @@ from threading import Thread
 from typing import List, Tuple, Dict
 
 import tests4py.api as t4p
+from tests4py.api.report import TestReport
 from tests4py.tests.utils import TestResult
 
 from pyrep.candidate import GeneticCandidate
@@ -130,9 +131,21 @@ class Tests4PyWorker(Worker):
         :param Dict[Tuple[MutationOperator], float] pre_calculated: The pre-calculated fitness values shared between
         all workers.
         :param os.PathLike out: The output directory for the worker.
+        :param bool raise_on_failure: Whether to raise an exception if a worker fails.
         """
         super().__init__(identifier, pre_calculated, out)
         self.raise_on_failure = raise_on_failure
+
+    def run_tests(self) -> TestReport:
+        """
+        Run the tests leveraging Tests4Py.
+        :return: The report of the tests.
+        """
+        return t4p.test(
+            self.cwd,
+            relevant_tests=True,
+            xml_output=XML_OUTPUT(self.identifier),
+        )
 
     def evaluate(self, candidate: GeneticCandidate, fitness: Fitness):
         """
@@ -151,11 +164,7 @@ class Tests4PyWorker(Worker):
                 if self.raise_on_failure:
                     raise report.raised
             else:
-                report = t4p.test(
-                    self.cwd,
-                    relevant_tests=True,
-                    xml_output=XML_OUTPUT(self.identifier),
-                )
+                report = self.run_tests()
                 if report.raised:
                     candidate.fitness = 0
                     if self.raise_on_failure:
@@ -197,4 +206,65 @@ class Tests4PyEngine(Engine):
         ]
 
 
-__all__ = ["Engine"]
+class Tests4PySystemTestWorker(Tests4PyWorker):
+    """
+    Worker class to evaluate the fitness of a candidate using Tests4Py for system tests.
+    """
+
+    def __init__(
+        self,
+        identifier: str,
+        pre_calculated: Dict[Tuple[MutationOperator], float],
+        tests: os.PathLike | List[os.PathLike],
+        out: os.PathLike = None,
+        raise_on_failure: bool = False,
+    ):
+        """
+        Initialize the worker.
+        :param str identifier: The identifier of the worker. Is used to create a directory for the worker.
+        :param Dict[Tuple[MutationOperator], float] pre_calculated: The pre-calculated fitness values shared between
+        all workers.
+        :param os.PathLike | List[os.PathLike] tests: The system tests to use.
+        :param os.PathLike out: The output directory for the worker.
+        :param raise_on_failure: Whether to raise an exception if a worker fails.
+        """
+        super().__init__(
+            identifier,
+            pre_calculated=pre_calculated,
+            out=out,
+            raise_on_failure=raise_on_failure,
+        )
+        self.tests = tests
+
+
+class Tests4PySystemTestEngine(Tests4PyEngine):
+    """
+    Engine class to evaluate the fitness of a list of candidates in parallel using Tests4Py system tests.
+    """
+
+    def __init__(
+        self,
+        fitness: Fitness,
+        tests: os.PathLike | List[os.PathLike],
+        workers: int = 1,
+        out: os.PathLike = None,
+        raise_on_failure: bool = False,
+    ):
+        """
+        Initialize the engine.
+        :param Fitness fitness: The fitness function to use.
+        :param int workers: The number of workers to use.
+        :param os.PathLike out: The output directory for the workers.
+        :param bool raise_on_failure: Whether to raise an exception if a worker fails.
+        """
+        super().__init__(fitness, workers, out)
+        self.tests = tests
+        self.workers = [
+            Tests4PySystemTestWorker(
+                f"rep_{i}", self.pre_calculated, self.tests, self.out, raise_on_failure
+            )
+            for i in range(workers)
+        ]
+
+
+__all__ = ["Engine", "Tests4PyEngine", "Tests4PySystemTestEngine"]
