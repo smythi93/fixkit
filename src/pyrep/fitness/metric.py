@@ -92,6 +92,18 @@ class Fitness(abc.ABC):
         pass
 
 
+class AbsolutFitness(Fitness):
+    def fitness(self, passing: Set[str], failing: Set[str]) -> float:
+        """
+        Evaluate the fitness of a candidate in the directory given by cwd with the provided environment based on a
+        true-false fitness that assigns 1 if all tests passes amd 0 otherwise.
+        :param Set[str] passing: The set of passing tests.
+        :param Set[str] failing: The set of failing tests.
+        :return float: The fitness of the candidate based on the sets of passing and failing tests.
+        """
+        return int(len(failing) == 0)
+
+
 class GenProgFitness(Fitness):
     def __init__(
         self,
@@ -127,4 +139,4 @@ class GenProgFitness(Fitness):
         ) / (self.w_pos_t * len(self.passing) + self.w_neg_t * len(self.failing))
 
 
-__all__ = ["Fitness", "GenProgFitness"]
+__all__ = ["Fitness", "GenProgFitness", "AbsolutFitness"]

@@ -17,6 +17,7 @@ from pyrep.constants import DEFAULT_WORK_DIR, XML_OUTPUT
 from pyrep.fitness.metric import Fitness
 from pyrep.genetic.operators import MutationOperator
 from pyrep.genetic.transform import MutationTransformer
+from pyrep.genetic.types import Population
 
 
 class Worker:
@@ -96,7 +97,7 @@ class Engine:
             Worker(f"rep_{i}", self.pre_calculated, self.out) for i in range(workers)
         ]
 
-    def evaluate(self, candidates=List[GeneticCandidate]):
+    def evaluate(self, candidates: Population):
         """
         Evaluate the fitness of a list of candidates in parallel.
         :param List[GeneticCandidate] candidates: The list of candidates to evaluate.
