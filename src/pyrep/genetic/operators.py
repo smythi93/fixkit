@@ -505,7 +505,7 @@ class Copy(MutationOperator):
         return isinstance(other, Copy) and self.identifier == other.identifier
 
 
-class ReplaceOperator(MutationOperator):
+class ReplaceOperator(MutationOperator, abc.ABC):
     """
     Mutation operator for replacing an operand in a statement.
     """
@@ -524,32 +524,78 @@ class ReplaceBinaryOperator(ReplaceOperator):
     """
     Mutation operator for replacing a binary operator in a statement.
     """
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        #is that correct? How differentiated can a statement be?
+        if isinstance(statement, ast.BinOp):
+            mutations[self.identfier] = self.mutate_condition(statement)
 
-    pass
+    def mutate_condition(self, statement: ast.BinOp) -> ast.BinOp:
+        all_ops = [ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow, ast.LShift, ast.RShift, ast.BitOr, ast.BitXor, ast.BitAnd, ast.MatMult]
+        new_op = random.choice(all_ops)
+
+        return ast.BinOp(left=statement.left, op=new_op, right=statement.right)
 
 
 class ReplaceComparisonOperator(ReplaceOperator):
     """
     Mutation operator for replacing a comparison operator in a statement.
     """
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        #is that correct? How differentiated can a statement be?
+        if isinstance(statement, ast.Compare):
+            mutations[self.identfier] = self.mutate_condition(statement)
 
-    pass
+    def mutate_condition(self, statement: ast.Compare) -> ast.Compare:
+        all_ops = [ast.Eq(), ast.NotEq(), ast.Lt(), ast.LtE(), ast.Gt(), ast.GtE(), ast.Is(), ast.IsNot(), ast.NotIn()] 
+        done = False
+        new_ops = []
+        while(not done):
+            new_ops = random.choices(all_ops, k=len(statement.ops))
+            #Problem:   this will always be true -> because in the list are objects even if we iterate over them!
+            #solution1: if we pick the same just ignore it?
+            #solution2: isInstance maybe? and only have classes in all_ops -> must be done for every ReplaceOperator
+            #Problem:   choosing operand pretty similiar possible to move it more up
+            if(new_ops != statement.ops):
+                done = True
+
+        return ast.Compare(statement.left, new_ops, statement.comparators)
 
 
 class ReplaceUnaryOperator(ReplaceOperator):
     """
-    Mutation operator for replacing a unary operator in a statement.
+    Mutation operator for replacing a unary operator in a statement.    
     """
 
-    pass
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        #is that correct? How differentiated can a statement be?
+        if isinstance(statement, ast.UnaryOp):
+            mutations[self.identfier] = self.mutate_condition(statement)
+
+    def mutate_condition(self, statement: ast.UnaryOp) -> ast.UnaryOp:
+        all_ops = [ast.UAdd, ast.USub, ast.Not, ast.Invert]
+        new_op = random.choice(all_ops)
+
+        return ast.UnaryOp(op=new_op(), operand=statement.operand)
 
 
 class ReplaceBooleanOperator(ReplaceOperator):
     """
     Mutation operator for replacing a boolean operator in a statement.
     """
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        #is that correct? How differentiated can a statement be?
+        if isinstance(statement, ast.BoolOp):
+            mutations[self.identfier] = self.mutate_condition(statement)
 
-    pass
+    def mutate_condition(self, statement: ast.BoolOp) -> ast.BoolOp:
+        all_ops = [ast.And, ast.Or]
+        new_op = random.choice(all_ops)
+
+        return ast.BoolOp(op=new_op(), values = statement.values)
 
 
 class Rename(MutationOperator):
