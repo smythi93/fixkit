@@ -16,10 +16,12 @@ from pyrep.genetic.crossover import Crossover, OnePointCrossover
 from pyrep.genetic.minimize import MutationMinimizer, DefaultMutationMinimizer
 from pyrep.genetic.operators import MutationOperator
 from pyrep.genetic.selection import Selection, RandomSelection
+from pyrep.genetic.types import Population
 from pyrep.localization import Localization
 from pyrep.localization.location import WeightedIdentifier, WeightedLocation
 from pyrep.localization.normalization import normalize
 from pyrep.logger import LOGGER
+from pyrep.search.search import EvolutionaryStrategy, SearchStrategy
 from pyrep.stmt import StatementFinder
 
 
@@ -115,10 +117,10 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         super().__init__(localization, out)
         self.initial_candidate = initial_candidate
-        self.population: List[GeneticCandidate] = [self.initial_candidate]
-        self.choices = list(self.initial_candidate.statements.keys())
+        self.population: Population = [self.initial_candidate]
+        self.choices: List[int] = list(self.initial_candidate.statements.keys())
         if is_t4p:
-            if system_tests:
+            if is_system_test:
                 if system_tests is None:
                     raise ValueError("System tests must be provided.")
                 self.fitness = Tests4PySystemTestEngine(
@@ -143,6 +145,15 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         self.minimizer = minimizer or DefaultMutationMinimizer()
         self.minimizer.fitness = self.fitness
         self.line_mode = line_mode
+        self.strategy = self.get_search_strategy()
+
+    def get_search_strategy(self) -> SearchStrategy:
+        return EvolutionaryStrategy(
+            viable=self.viable,
+            select=self.select,
+            crossover=self.crossover_population,
+            mutate=self.mutate_population,
+        )
 
     @staticmethod
     def get_initial_candidate(
@@ -175,10 +186,10 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         return NotImplemented
 
-    def repair(self) -> List[GeneticCandidate]:
+    def repair(self) -> Population:
         """
         Repair the fault using genetic programming.
-        :return List[GeneticCandidate]: The list of candidates that repair (or perform best) the fault.
+        :return Population: The list of candidates that repair (or perform best) the fault.
         """
         # Localize the faults.
         LOGGER.info("Localizing the faulty code locations.")
@@ -195,7 +206,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
             LOGGER.info(
                 "Filling the population and evaluating the fitness of each candidate."
             )
-            self.fill_population()
+            self.population = self.fill_population(self.population)
             self.fitness.evaluate(self.population)
 
             # Iterate until the maximum number of generations is reached or the fault is repaired.
@@ -216,7 +227,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         fitness = max(c.fitness for c in self.population)
         LOGGER.info("The best candidate has a fitness of %.2f.", fitness)
         self.population = [c for c in self.population if c.fitness == fitness]
-        self.filter_population()
+        self.population = self.filter_population(self.population)
         LOGGER.info("Minimize the best candidates.")
         self.population = self.minimizer.minimize(self.population)
         LOGGER.info("Found %d possible repairs.", len(self.population))
@@ -233,17 +244,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         Perform an iteration of the genetic programming.
         """
-        # Filter the population and select the best candidates.
-        LOGGER.info("Filtering the population and selecting the best candidates.")
-        self.viable()
-        self.select()
-
-        # Crossover and mutate the population.
-        LOGGER.info("Crossover the population.")
-        self.crossover_population()
-        LOGGER.info("Mutate the population.")
-        self.mutate_population()
-
+        self.population = self.prepare_population(self.population)
+        self.population = self.strategy.search(self.population)
         # Evaluate the fitness for the population.
         LOGGER.info("Evaluate the fitness for the population.")
         self.fitness.evaluate(self.population)
@@ -266,45 +268,51 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
                         WeightedIdentifier(identifier, suggestion.weight)
                     )
 
-    def viable(self):
+    # noinspection PyMethodMayBeStatic
+    def prepare_population(self, population: Population) -> Population:
+        """
+        Prepare the population for the next generation.
+        """
+        return population
+
+    def viable(self, population: Population) -> Population:
         """
         Filter the population to keep only viable candidates whose fitness is greater than 0.
         """
-        self.population = [c for c in self.population if c.fitness > 0]
-        if not self.population:
+        population = [c for c in population if c.fitness > 0]
+        if not population:
             LOGGER.info("No viable candidates, start with new population.")
-            self.population = [self.initial_candidate]
-            self.fill_population()
+            population = [self.initial_candidate]
+            population = self.fill_population(population)
+        return population
 
-    def select(self):
+    def select(self, population: Population) -> Population:
         """
         Select the best candidates from the population for the next generation.
         """
-        self.population = self.selection.select(
-            self.population, self.population_size // 2
-        )
+        return self.selection.select(population, self.population_size // 2)
 
-    def fill_population(self):
+    def fill_population(self, population: Population) -> Population:
         """
         Fill the population with clones of the initial candidate.
         """
-        new_population = self.population[:]
+        new_population = population[:]
         while len(new_population) < self.population_size:
-            new_population.append(
-                random.choice(self.population).clone(change_gen=False)
-            )
-        self.population = new_population
+            new_population.append(random.choice(population).clone(change_gen=False))
+        return new_population
 
-    def crossover_population(self):
+    def crossover_population(self, population: Population) -> Population:
         """
         Crossover the population to create new candidates.
         """
-        random.shuffle(self.population)
+        population = population[:]
+        random.shuffle(population)
         for parent_1, parent_2 in zip(
-            self.population[: len(self.population) // 2],
-            self.population[len(self.population) // 2 :],
+            population[: len(population) // 2],
+            population[len(population) // 2 :],
         ):
-            self.population.extend(self.crossover(parent_1, parent_2))
+            population.extend(self.crossover(parent_1, parent_2))
+        return population
 
     def crossover(
         self, parent_1: GeneticCandidate, parent_2: GeneticCandidate
@@ -317,14 +325,16 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         return self.crossover_operator.crossover(parent_1, parent_2)
 
-    def mutate_population(self):
+    def mutate_population(self, population: Population) -> Population:
         """
         Mutate the population to create new candidates by giving each candidate a chance to mutate.
         """
-        for candidate in self.population[:]:
-            self.population.append(self.mutate(candidate))
+        population = population[:]
+        for candidate in population[:]:
+            population.extend(self.mutate(candidate))
+        return population
 
-    def mutate(self, selection: GeneticCandidate) -> GeneticCandidate:
+    def mutate(self, selection: GeneticCandidate) -> Collection[GeneticCandidate]:
         """
         Mutate a candidate to create a new candidate.
         :param GeneticCandidate selection: The candidate to mutate.
@@ -338,7 +348,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
                         0
                     ](location.identifier, self.choices)
                 )
-        return candidate
+        return [candidate]
 
     def should_mutate(self, weight: float) -> bool:
         """
@@ -348,8 +358,9 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         return random.random() < weight and random.random() < self.w_mut
 
-    def filter_population(self):
+    # noinspection PyMethodMayBeStatic
+    def filter_population(self, population: Population) -> Population:
         """
         Filter the population to remove duplicates.
         """
-        self.population = list(set(self.population))
+        return list(set(population))

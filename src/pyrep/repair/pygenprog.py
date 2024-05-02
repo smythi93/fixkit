@@ -4,7 +4,7 @@ The pygenprog module provides the necessary tools to repair a fault using GenPro
 
 import os
 import random
-from typing import List, Optional
+from typing import List, Optional, Collection
 
 from pyrep.candidate import Candidate, GeneticCandidate
 from pyrep.fitness.metric import GenProgFitness
@@ -146,7 +146,7 @@ class SingleMutationPyGenProg(PyGenProg):
     Class for repairing a fault using GenProg with a single mutation.
     """
 
-    def mutate(self, selection: GeneticCandidate) -> GeneticCandidate:
+    def mutate(self, selection: GeneticCandidate) -> Collection[GeneticCandidate]:
         """
         Mutate the given selection by adding a single mutation.
         :param GeneticCandidate selection: The candidate to mutate.
@@ -161,7 +161,7 @@ class SingleMutationPyGenProg(PyGenProg):
                 location.identifier, self.choices
             )
         )
-        return candidate
+        return [candidate]
 
     @staticmethod
     def _from_source(
