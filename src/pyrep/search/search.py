@@ -43,13 +43,13 @@ class EvolutionaryStrategy(SearchStrategy):
 class ExhaustiveStrategy(SearchStrategy):
     def __init__(
         self,
-        mutations: Callable[[], List[Type[MutationOperator]]],
-        suggestions: List[WeightedIdentifier],
-        choices: List[int],
+        mutators: List[Type[MutationOperator]], #Auch Callable?
+        suggestions: List[WeightedIdentifier], #Callable die suggestions returnt .. da diese sich ja ändern ??
+        choices: Optional[List[int]] = None, # sollten die nicht optional sein? bei mutation operator sind sie auch optional
         mutate: Optional[GeneticFunction] = None,
     ):
         super().__init__()
-        self.mutations = mutations
+        self.mutators = mutators
         self.suggestions: List[WeightedIdentifier] = suggestions
         self.choices = choices
         self.mutate: GeneticFunction = mutate or self._mutate
@@ -63,14 +63,15 @@ class ExhaustiveStrategy(SearchStrategy):
         :param GeneticCandidate population: The population to mutate.
         :return GeneticCandidate: The new mutated population.
         """
+        #TODO: erklären lassen [:] -> copy aber wieso 2 mal
         population = population[:]
         for candidate in population[:]:
             for location in self.suggestions:
                 if location.weight > 0:
-                    for mutation in self.mutations():
+                    for mutatator in self.mutators:
                         new_candidate = candidate.clone()
                         new_candidate.mutations.append(
-                            mutation(location.identifier, self.choices)
+                            mutatator(location.identifier, self.choices)
                         )
                         population.append(new_candidate)
         return population

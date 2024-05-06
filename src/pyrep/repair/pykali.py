@@ -18,6 +18,7 @@ from pyrep.localization import Localization
 from pyrep.localization.location import WeightedLocation
 from pyrep.repair.repair import GeneticRepair
 from pyrep.genetic.selection import UniversalSelection, Selection
+from pyrep.search.search import SearchStrategy, ExhaustiveStrategy
 
 
 class PyKali(GeneticRepair):
@@ -40,7 +41,7 @@ class PyKali(GeneticRepair):
         line_mode: bool = False,
     ):
         """
-        Initialize the GenProg repair.
+        Initialize the Kali repair.
         :param GeneticCandidate initial_candidate: The initial candidate to start the repair.
         :param Localization localization: The localization to use for the repair.
         :param int population_size: The size of the population.
@@ -103,7 +104,7 @@ class PyKali(GeneticRepair):
         line_mode: bool = False,
     ) -> "PyKali": 
         """
-        Create a GenProg repair from the source.
+        Create a Kali repair from the source.
         :param os.PathLike src: The source directory of the project.
         :param Optional[List[str]] excludes: The set of files to exclude from the statement search.
         :param Localization localization: The localization to use for the repair.
@@ -143,6 +144,12 @@ class PyKali(GeneticRepair):
             self.localization.failing,
         )
         return suggestions
+    
+    def get_search_strategy(self) -> SearchStrategy:
+        return ExhaustiveStrategy(
+            mutators=self.operator,
+            suggestions=self.localize() # or self.suggestions
+        )
 
 
 
