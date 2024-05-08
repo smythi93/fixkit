@@ -53,7 +53,7 @@ class PyKali(GeneticRepair):
         :param float w_pos_t: The weight for the positive test cases.
         :param float w_neg_t: The weight for the negative test cases.
         """
-        self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t)
+        self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t) #still uses GenProgFitness -> ??
         super().__init__(
             initial_candidate=initial_candidate,
             fitness=self.metric, 
@@ -92,7 +92,6 @@ class PyKali(GeneticRepair):
         src: os.PathLike,
         excludes: Optional[List[str]],
         localization: Localization,
-        population_size: int,
         max_generations: int,
         w_mut: float,
         selection: Selection = None,
@@ -121,7 +120,6 @@ class PyKali(GeneticRepair):
         return PyKali(
             initial_candidate=PyKali.get_initial_candidate(src, excludes, line_mode),
             localization=localization,
-            population_size=1,
             max_generations=max_generations,
             w_mut=w_mut,
             selection=selection,
@@ -147,7 +145,7 @@ class PyKali(GeneticRepair):
     
     def get_search_strategy(self) -> SearchStrategy:
         return ExhaustiveStrategy(
-            mutators=self.operator,
+            operators=self.operator,
             suggestions=self.localize() # or self.suggestions
         )
 
