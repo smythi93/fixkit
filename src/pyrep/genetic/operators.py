@@ -613,6 +613,80 @@ class Rename(MutationOperator):
         return False
 
 
+class ModifyIfCondition(MutationOperator, abc.ABC):
+
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        id = self.identifier
+        statement = mutations.get(id, statements[id])
+        if isinstance(statement, ast.If):
+            mutations[id] = self.mutate_condition(statement)
+
+    def mutate_condition(self, statement: ast.If) -> ast.If:
+        return ast.If(test=self.get_replace_condition(), body=statement.body, orelse=statement.orelse)
+
+    @abc.abstractmethod
+    def get_replace_condition(self) -> ast.expr:
+        pass
+    
+    def __hash__(self):
+        return super().__hash__()
+    
+    def __eq__(self,other):
+        return False
+
+class ModifyIfToTrue(ModifyIfCondition):
+
+    def get_replace_condition(self) -> ast.expr:
+        return ast.Constant(value=True)
+
+class ModifyIfToFalse(ModifyIfCondition):
+
+    def get_replace_condition(self) -> ast.expr:
+        return ast.Constant(value=False)
+
+class InsertReturn(MutationOperator, abc.ABC):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        mutations[self.identifier] = self.insert(
+            mutations.get(self.identifier, statements[self.identifier]),
+        )
+
+    #hacky way for insert before or after -> not sure if good for our purpose, because kali wants to do every combination. so no randomness.
+    def insert(self, tree: ast.AST) -> ast.AST:
+        return random.choice([ast.Module(body=[self.get_return_statement(), tree], type_ignores=[]),
+                             ast.Module(body=[tree, self.get_return_statement()], type_ignores=[])])
+    
+    def __eq__(self,other):
+        return False
+    
+    def __hash__(self):
+        return super().__hash__()
+    
+    @abc.abstractmethod
+    def get_return_statement() -> ast.Return:
+        pass
+
+class InsertReturn0(InsertReturn):
+    def get_return_statement(self) -> ast.Return:
+        return ast.Return(value=ast.Constant(0))
+
+class InsertReturnNone(InsertReturn):
+    def get_return_statement(self) -> ast.Return:
+        return ast.Return(value=ast.Constant(None))
+
+class InsertReturnString(InsertReturn):
+    def get_return_statement(self) -> ast.Return:
+        return ast.Return(value=ast.Constant(""))
+
+class InsertReturnList(InsertReturn):
+    def get_return_statement(self) -> ast.Return:
+        #ast.List used correctly?
+        return ast.Return(value=ast.List(elts=[], ctx=ast.Load))
+
+class InsertReturnTuple(InsertReturn):
+    def get_return_statement(self) -> ast.Return:
+        #ast.Tuple used correctly?
+        return ast.Return(value=ast.Tuple(elts=[], ctx=ast.Load))
+        
 class Mutator(ast.NodeTransformer):
     """
     Mutator class to mutate the abstract syntax tree based on the mutation operators.
