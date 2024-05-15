@@ -13,7 +13,7 @@ from tests4py.api.report import TestReport
 from tests4py.tests.utils import TestResult
 
 from pyrep.candidate import GeneticCandidate
-from pyrep.constants import DEFAULT_WORK_DIR, XML_OUTPUT
+from pyrep.constants import DEFAULT_WORK_DIR, XML_OUTPUT, JSON_OUTPUT
 from pyrep.fitness.metric import Fitness
 from pyrep.genetic.operators import MutationOperator
 from pyrep.genetic.transform import MutationTransformer
@@ -236,6 +236,17 @@ class Tests4PySystemTestWorker(Tests4PyWorker):
             raise_on_failure=raise_on_failure,
         )
         self.tests = tests
+
+    def run_tests(self) -> TestReport:
+        """
+        Run the system tests leveraging Tests4Py.
+        :return: The report of the tests.
+        """
+        return t4p.systemtest_test(
+            self.cwd,
+            path_or_str=self.tests,
+            output=JSON_OUTPUT(self.identifier),
+        )
 
 
 class Tests4PySystemTestEngine(Tests4PyEngine):

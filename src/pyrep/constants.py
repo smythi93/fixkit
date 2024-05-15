@@ -13,6 +13,10 @@ def XML_OUTPUT(name: str) -> Path:
     return Path(DEFAULT_WORK_DIR, f"{name}.xml")
 
 
+def JSON_OUTPUT(name: str) -> Path:
+    return Path(DEFAULT_WORK_DIR, f"{name}.json")
+
+
 DEFAULT_EXCLUDES = [
     "test/*",
     "tests/*",
