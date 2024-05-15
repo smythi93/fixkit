@@ -6,7 +6,7 @@ from utils import SUBJECTS, REP, SFL
 
 import tests4py.api as t4p
 
-from pyrep.constants import DEFAULT_WORK_DIR, DEFAULT_EXCLUDES
+from pyrep.constants import DEFAULT_EXCLUDES
 from pyrep.genetic.operators import Replace
 from pyrep.localization.coverage import CoverageLocalization
 from pyrep.localization.t4p import Tests4PyLocalization

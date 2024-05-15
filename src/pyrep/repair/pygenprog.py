@@ -35,6 +35,8 @@ class PyGenProg(GeneticRepair):
         w_pos_t: float = 1,
         w_neg_t: float = 10,
         is_t4p: bool = False,
+        is_system_test: bool = False,
+        system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
     ):
         """
@@ -65,6 +67,8 @@ class PyGenProg(GeneticRepair):
             workers=workers,
             out=out,
             is_t4p=is_t4p,
+            is_system_test=is_system_test,
+            system_tests=system_tests,
             line_mode=line_mode,
         )
 
@@ -96,6 +100,8 @@ class PyGenProg(GeneticRepair):
         w_pos_t: float = 1,
         w_neg_t: float = 10,
         is_t4p: bool = False,
+        is_system_test: bool = False,
+        system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
     ) -> "PyGenProg":
         """
@@ -125,6 +131,8 @@ class PyGenProg(GeneticRepair):
             w_pos_t=w_pos_t,
             w_neg_t=w_neg_t,
             is_t4p=is_t4p,
+            is_system_test=is_system_test,
+            system_tests=system_tests,
             line_mode=line_mode,
         )
 
@@ -177,6 +185,8 @@ class SingleMutationPyGenProg(PyGenProg):
         w_pos_t: float = 1,
         w_neg_t: float = 10,
         is_t4p: bool = False,
+        is_system_test: bool = False,
+        system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
     ) -> "SingleMutationPyGenProg":
         """
@@ -208,6 +218,8 @@ class SingleMutationPyGenProg(PyGenProg):
             w_pos_t=w_pos_t,
             w_neg_t=w_neg_t,
             is_t4p=is_t4p,
+            is_system_test=is_system_test,
+            system_tests=system_tests,
             line_mode=line_mode,
         )
 
