@@ -4,7 +4,7 @@ The pygenprog module provides the necessary tools to repair a fault using GenPro
 
 import os
 import random
-from typing import List, Optional
+from typing import List, Optional, Collection
 
 from pyrep.candidate import Candidate, GeneticCandidate
 from pyrep.fitness.metric import GenProgFitness
@@ -35,6 +35,8 @@ class PyGenProg(GeneticRepair):
         w_pos_t: float = 1,
         w_neg_t: float = 10,
         is_t4p: bool = False,
+        is_system_test: bool = False,
+        system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
     ):
         """
@@ -65,6 +67,8 @@ class PyGenProg(GeneticRepair):
             workers=workers,
             out=out,
             is_t4p=is_t4p,
+            is_system_test=is_system_test,
+            system_tests=system_tests,
             line_mode=line_mode,
         )
 
@@ -96,6 +100,8 @@ class PyGenProg(GeneticRepair):
         w_pos_t: float = 1,
         w_neg_t: float = 10,
         is_t4p: bool = False,
+        is_system_test: bool = False,
+        system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
     ) -> "PyGenProg":
         """
@@ -125,6 +131,8 @@ class PyGenProg(GeneticRepair):
             w_pos_t=w_pos_t,
             w_neg_t=w_neg_t,
             is_t4p=is_t4p,
+            is_system_test=is_system_test,
+            system_tests=system_tests,
             line_mode=line_mode,
         )
 
@@ -146,7 +154,7 @@ class SingleMutationPyGenProg(PyGenProg):
     Class for repairing a fault using GenProg with a single mutation.
     """
 
-    def mutate(self, selection: GeneticCandidate) -> GeneticCandidate:
+    def mutate(self, selection: GeneticCandidate) -> Collection[GeneticCandidate]:
         """
         Mutate the given selection by adding a single mutation.
         :param GeneticCandidate selection: The candidate to mutate.
@@ -161,7 +169,7 @@ class SingleMutationPyGenProg(PyGenProg):
                 location.identifier, self.choices
             )
         )
-        return candidate
+        return [candidate]
 
     @staticmethod
     def _from_source(
@@ -177,6 +185,8 @@ class SingleMutationPyGenProg(PyGenProg):
         w_pos_t: float = 1,
         w_neg_t: float = 10,
         is_t4p: bool = False,
+        is_system_test: bool = False,
+        system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
     ) -> "SingleMutationPyGenProg":
         """
@@ -208,6 +218,8 @@ class SingleMutationPyGenProg(PyGenProg):
             w_pos_t=w_pos_t,
             w_neg_t=w_neg_t,
             is_t4p=is_t4p,
+            is_system_test=is_system_test,
+            system_tests=system_tests,
             line_mode=line_mode,
         )
 
