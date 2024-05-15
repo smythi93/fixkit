@@ -17,7 +17,6 @@ from fixkit.logger import debug_logger
 from fixkit.repair.pymutrepair import PyMutRepair
 from fixkit.repair.pycardumen import PyCardumen
 
-from utils import SUBJECTS, REP, SFL
 
 
 class TestRepair(unittest.TestCase):
@@ -72,7 +71,7 @@ class TestRepair(unittest.TestCase):
         #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
         #write_patches(patches, out=REP)
         #self.assertTrue((REP / "patches" / "1.patch").exists())
-    
+
     def test_repair_middle_pymutrepair(self):
         repair = PyMutRepair.from_source(
             src=SUBJECTS / "middle",
@@ -97,7 +96,7 @@ class TestRepair(unittest.TestCase):
         #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
         #write_patches(patches, out=REP)
         #self.assertTrue((REP / "patches" / "1.patch").exists())
-    
+
     def test_repair_middle_pymutrepair(self):
         repair = PyCardumen.from_source(
             src=SUBJECTS / "middle",
@@ -115,7 +114,7 @@ class TestRepair(unittest.TestCase):
             workers=16,
             out=REP,
         )
-        
+
         random.seed(6)
         patches = repair.repair()
         self.assertGreater(len(patches), 0)
