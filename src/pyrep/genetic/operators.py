@@ -604,7 +604,23 @@ class Rename(MutationOperator):
     """
 
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
-        pass
+        #Aufwendig die Variablen jedes mal zu suchen, könnte man auch nur einmal machen in init des repairs
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        all_idfs = set()
+        #bei uns ist das programm ja in mehrere ast gesplittet -> wie mit scopes? am besten alle statements zu einem ast machen
+        #erstmal nur scopes für einen ast
+        for id in statements:
+            collector = Variable_Collector(id)
+            collector.visit(statements[id])
+            print(collector.names)
+            for name in collector.names:
+                all_idfs.add(name)
+        new_name = random.choice(tuple(all_idfs))
+        #TODO: Was ist wenn das statement mehr als einen ast.Name enthält -> dann kriegen alle den neuen namen, das wollen wir ja nicht 
+        mutations[self.identifier] = self._mutate_name(statement, new_name)
+    
+    def _mutate_name(self, statement, new_name):
+        return Name_Transformer(new_name).visit(statement)
 
     def __hash__(self):
         return super().__hash__()
@@ -612,7 +628,56 @@ class Rename(MutationOperator):
     def __eq__(self, other):
         return False
 
+class Name_Transformer(ast.NodeTransformer):
+    def __init__(self, new_name: str) -> None:
+        self.new_name = new_name
+        super().__init__()
+    
+    def visit_Name(self, node: ast.Name):
+        return ast.Name(id = self.new_name, ctx = node.ctx)
+    
+class Variable_Collector(ast.NodeVisitor):
+    """
+    Collects the variable which are in the same scope as the statment
+    """
+    def __init__(self, statement: ast.stmt):
+        self.names = set()
+        self.found = False
+        self.statement = statement
+        self.scope_stack = [set()]
 
+    def visit_Name(self, node: ast.Name):
+        self.scope_stack[-1].add(node.id)
+        self.generic_visit(node)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        self.visit_Helper(node)
+    
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
+        self.visit_Helper(node)
+    
+    def visit_ClassDef(self, node: ast.ClassDef):
+        self.visit_Helper(node)
+    
+    def visit_Helper(self, node):
+        #opening new scope
+        self.scope_stack.append(set())
+        self.generic_visit(node)
+        if self.found:
+            for scope in self.scope_stack:
+                for name in scope:
+                    self.names.add(name)
+            #Abbruch wäre noch besser
+            self.found = False
+        #closing scope
+        self.scope_stack.pop()
+
+    def generic_visit(self, node: ast.AST):
+        if self.statement == node:
+            self.found = True
+        return super().generic_visit(node)
+    
+    
 class ModifyIfCondition(MutationOperator, abc.ABC):
 
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
@@ -645,12 +710,17 @@ class ModifyIfToFalse(ModifyIfCondition):
         return ast.Constant(value=False)
 
 class InsertReturn(MutationOperator, abc.ABC):
+    """
+    Inserts a random return statment before or after the statement
+    """
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         mutations[self.identifier] = self.insert(
             mutations.get(self.identifier, statements[self.identifier]),
         )
 
     #hacky way for insert before or after -> not sure if good for our purpose, because kali wants to do every combination. so no randomness.
+    #könnte man das einfach weglassen und das statement komplett durch das return statement ersetzen?
+    #das wäre doch viel besser/einfacher
     def insert(self, tree: ast.AST) -> ast.AST:
         return random.choice([ast.Module(body=[self.get_return_statement(), tree], type_ignores=[]),
                              ast.Module(body=[tree, self.get_return_statement()], type_ignores=[])])

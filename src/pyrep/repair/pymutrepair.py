@@ -15,6 +15,7 @@ from pyrep.localization import Localization
 from pyrep.localization.location import WeightedLocation
 from pyrep.repair.repair import GeneticRepair
 from pyrep.genetic.selection import UniversalSelection, Selection
+from pyrep.search.search import ExhaustiveStrategy, SearchStrategy
 
 
 class PyMutRepair(GeneticRepair):
@@ -141,5 +142,10 @@ class PyMutRepair(GeneticRepair):
         )
         return suggestions
 
-
+    def get_search_strategy(self) -> SearchStrategy:
+        return ExhaustiveStrategy(
+            operators=self.operator,
+            suggestions=self.localize() # or self.suggestions
+        )
+    
 __all__ = ["PyMutRepair"]

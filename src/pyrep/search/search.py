@@ -72,6 +72,7 @@ class ExhaustiveStrategy(SearchStrategy):
                     for operator in self.operators:
                         new_candidate = candidate.clone()
                         #location gat kein identifier aber ein .line
+                        #wieso ist mutations eine list von mutations operators und nicht dieses statement/mutations ast???
                         new_candidate.mutations.append(
                             operator(location.line, self.choices)
                         )
