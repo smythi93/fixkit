@@ -630,8 +630,8 @@ class Rename(MutationOperator):
 
 class Name_Transformer(ast.NodeTransformer):
     def __init__(self, new_name: str) -> None:
-        self.new_name = new_name
         super().__init__()
+        self.new_name = new_name
     
     def visit_Name(self, node: ast.Name):
         return ast.Name(id = self.new_name, ctx = node.ctx)
