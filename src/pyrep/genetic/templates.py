@@ -10,6 +10,7 @@ from typing import List
 
 #Vor Nutzung von applyChanges ScopeVariablen Collector benutzen -> Anzahl von Placeholdern in ProbalisticModel -> Und dann in applyChanges
 
+#TODO: Support same var multiple times in 1 stmt -> List of List for Nodes better idea?
 class Template:
     """
     Creates a Template from the Statement.
