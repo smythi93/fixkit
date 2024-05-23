@@ -10,7 +10,7 @@ from typing import List
 
 #Vor Nutzung von applyChanges ScopeVariablen Collector benutzen -> Anzahl von Placeholdern in ProbalisticModel -> Und dann in applyChanges
 
-#TODO: Support same var multiple times in 1 stmt -> List of List for Nodes better idea?
+
 class Template:
     """
     Creates a Template from the Statement.
@@ -25,21 +25,20 @@ class Template:
         collector = VarNodeCollector()
         collector.visit(self.statement)
         self.nodes = collector.nodes
-        #For testing purposes before calling apply_Changes
-        self.number_of_nodes = len(self.nodes)
     
     def apply_Changes(self, new_vars: List) -> ast.AST:
         """
         Applys the new Variables to the Statement and returns the changed Statement
         """
         assert(len(self.nodes) == len(new_vars))
-        for node in self.nodes:
+        for var_name, nodes in self.nodes.items():
             var = random.choice(new_vars)
             new_vars.remove(var)
-            if isinstance(node, ast.Name):
-                node.id = var
-            if isinstance(node, ast.arg):
-                node.arg = var
+            for node in nodes:
+                if isinstance(node, ast.Name):
+                    node.id = var
+                if isinstance(node, ast.arg):
+                    node.arg = var
 
         return self.statement
 
@@ -52,14 +51,19 @@ class VarNodeCollector(ast.NodeVisitor):
     nodes = collector.nodes
     """
     def __init__(self) -> None:
-        self.nodes = []
+        self.nodes = {}
 
     def visit_arg(self, node: ast.arg):
-        self.nodes.append(node)
+        if not node.arg == "self":
+            if node.arg not in self.nodes:
+                self.nodes[node.arg] = []
+            self.nodes[node.arg].append(node)
         self.generic_visit(node)
 
     def visit_Name(self, node: ast.Name):
-        self.nodes.append(node)
+        if node.id not in self.nodes:
+            self.nodes[node.id] = []
+        self.nodes[node.id].append(node)
         self.generic_visit(node)
 
 class ProbalisticModel:
