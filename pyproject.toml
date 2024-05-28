@@ -33,6 +33,9 @@ dependencies = [
     "coverage>=7.4.3",
     "numpy>=1.26.4",
     "tests4py @ git+https://github.com/smythi93/Tests4Py@52c175fb772eac13bd7e7a85f9945fb1a9ec2a91",
+    "gensim>=4.3.2",
+    "tensorflow>=2.16.1",
+    "kormos>=0.1.4",
 ]
 
 [project.urls]
