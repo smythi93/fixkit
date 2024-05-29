@@ -2,8 +2,8 @@ import ast
 import random
 
 from copy import deepcopy
-from typing import List
-
+from typing import List, Dict
+from itertools import combinations, chain
 
 #Problems: Python not type based -> dadurch templates oft quatsch
 #In Java werden double nur durch doubles ersetzt
@@ -31,14 +31,13 @@ class Template:
         Applys the new Variables to the Statement and returns the changed Statement
         """
         assert(len(self.nodes) == len(new_vars))
-        for var_name, nodes in self.nodes.items():
+        for node in self.nodes:
             var = random.choice(new_vars)
             new_vars.remove(var)
-            for node in nodes:
-                if isinstance(node, ast.Name):
-                    node.id = var
-                if isinstance(node, ast.arg):
-                    node.arg = var
+            if isinstance(node, ast.Name):
+                node.id = var
+            if isinstance(node, ast.arg):
+                node.arg = var
 
         return self.statement
 
@@ -51,21 +50,64 @@ class VarNodeCollector(ast.NodeVisitor):
     nodes = collector.nodes
     """
     def __init__(self) -> None:
-        self.nodes = {}
+        self.nodes = []
 
     def visit_arg(self, node: ast.arg):
         if not node.arg == "self":
-            if node.arg not in self.nodes:
-                self.nodes[node.arg] = []
-            self.nodes[node.arg].append(node)
+            self.nodes.append(node)
         self.generic_visit(node)
 
     def visit_Name(self, node: ast.Name):
-        if node.id not in self.nodes:
-            self.nodes[node.id] = []
-        self.nodes[node.id].append(node)
+        self.nodes.append(node)
         self.generic_visit(node)
 
-class ProbalisticModel:
-    pass
+class VarNamesCollector(ast.NodeVisitor):
+    """
+    Collects all Variable Names of the statement it is visiting.
+
+    collector = VarCollector()
+    collector.visit(stmt)
+    vars = collector.vars
+    """
+    def __init__(self) -> None:
+        self.vars = []
+
+    def visit_arg(self, node: ast.arg):
+        if not node.arg == "self":
+            self.vars.append(node.arg)
+        self.generic_visit(node)
+
+    def visit_Name(self, node: ast.Name):
+        self.vars.append(node.id)
+        self.generic_visit(node)
+
+class 
+class ProbabilisticModel:
+    """
+    Creates a Probabilistic Model for usage of any given combinations of vars in the Program.
+    p(vi .. vn) = number_of_statements_containing(vi .. vn) / all_statements_with_n_names
+    """
+    def __init__(self, statements: Dict[int, ast.AST]) -> None:
+        self.statements = statements
+        self.probabilities: Dict[:int] = dict()
+        self.createModel()
+
+    def createModel(self):
+        for statement in self.statements.values():
+            collector = VarNamesCollector()
+            collector.visit(statement)
+            vars = collector.vars
+            all_combinations = [comb for i in range(1, len(vars) + 1) for comb in combinations(vars, i)]
+            #all_combinations = list(chain.from_iterable(combinations(vars, i) for i in range(1, len(vars) + 1)))
+            for combination in all_combinations:
+                #combination = repr(combination)
+                print(combination)
+                if combination not in self.probabilities.keys():
+                    pass
+
+
+
+
+
+
 
