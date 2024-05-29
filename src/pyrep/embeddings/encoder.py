@@ -1,9 +1,6 @@
 import random
 from typing import Callable, Tuple, List, Optional
 import numpy as np
-import tensorflow as tf
-import tensorflow_probability as tfp
-from tensorflow import keras
 
 from pyrep.logger import LOGGER
 
@@ -16,7 +13,7 @@ class Layer:
         derivative: Optional[Callable[[np.array], np.array]] = None,
     ):
         if (
-            activation not in [Layer.sigmoid, Layer.relu, Layer.tanh, Layer.identity]
+            activation not in [Layer.sigmoid, Layer.relu, Layer.tanh, Layer.linear]
             and derivative is None
         ):
             raise ValueError("Invalid activation function")
@@ -53,11 +50,11 @@ class Layer:
         return 1 - np.tanh(x) ** 2
 
     @staticmethod
-    def identity(x):
+    def linear(x):
         return x
 
     @staticmethod
-    def identity_derivative(x):
+    def linear_derivative(x):
         return 1
 
     @staticmethod
@@ -179,7 +176,7 @@ class NeuralNetwork:
 
 class AutoEncoder(NeuralNetwork):
     def __init__(
-        self, n, encoder_activation=Layer.tanh, decoder_activation=Layer.identity
+        self, n, encoder_activation=Layer.tanh, decoder_activation=Layer.linear
     ):
         self.n = n
         self.encoder = Layer(encoder_activation, (2 * n, n))
@@ -205,32 +202,16 @@ class AutoEncoder(NeuralNetwork):
         return np.split(self.decoder.forward(x).reshape(-1), 2)
 
 
-class DeepRepairAutoEncoder:
+class DeepRepairAutoEncoder(AutoEncoder):
     def __init__(self, n):
+        super().__init__(n, encoder_activation=Layer.tanh, decoder_activation=Layer.linear)
         self.n = n
-        self.encoder_layer = keras.layers.Dense(n, activation="tanh")
-        self.decoder_layer = keras.layers.Dense(2 * n, activation="linear")
-        self.encoder = keras.Sequential([keras.Input((2 * n,)), self.encoder_layer])
-        self.decoder = keras.Sequential([keras.Input((n,)), self.decoder_layer])
-        self.loss = keras.losses.MeanSquaredError()
-        self.model = keras.Sequential(
-            [keras.Input((2 * n,)), self.encoder_layer, self.decoder_layer]
-        )
-        self.model.compile(loss=self.loss)
-        self.encoder.compile(loss=self.loss)
-        self.decoder.compile(loss=self.loss)
 
     def encode(self, x_l, x_r):
-        return self.encoder.predict(np.array([np.concatenate([x_l, x_r])]))
+        return self.encoder.forward(np.array([np.concatenate([x_l, x_r])]))
 
     def decode(self, x):
-        return np.split(self.decoder.predict(x)[0], 2)
-
-    def call(self, x):
-        encoded = self.encoder(x)
-        decoded = self.decoder(encoded)
-        return decoded
-
+        return np.split(self.decoder.forward(x)[0], 2)
     def function_factory(self, x_train):
         shapes = tf.shape_n(self.model.trainable_variables)
         n_tensors = len(shapes)
@@ -250,8 +231,8 @@ class DeepRepairAutoEncoder:
         @tf.function
         def assign_new_model_parameters(params_1d):
             params = tf.dynamic_partition(params_1d, part, n_tensors)
-            for i, (shape, param) in enumerate(zip(shapes, params)):
-                self.model.trainable_variables[i].assign(tf.reshape(param, shape))
+            for j, (s, param) in enumerate(zip(shapes, params)):
+                self.model.trainable_variables[j].assign(tf.reshape(param, s))
 
         @tf.function
         def f(params_1d):
@@ -274,16 +255,60 @@ class DeepRepairAutoEncoder:
 
         return f
 
-    def train(self, x, epochs=50):
+    def train(self, x, epochs=50, lbfgs=True):
         x_train = []
         for data_1 in x:
             for data_2 in x:
                 x_train.append(np.concatenate([data_1, data_2]))
-        func = self.function_factory(np.array(x_train))
-        init_params = tf.dynamic_stitch(func.idx, self.model.trainable_variables)
-        results = tfp.optimizer.lbfgs_minimize(
-            func,
-            initial_position=init_params,
-            max_iterations=epochs,
-        )
-        func.assign_new_model_parameters(results.position)
+        if lbfgs:
+            func = self.function_factory(np.array(x_train))
+            init_params = tf.dynamic_stitch(func.idx, self.model.trainable_variables)
+            results = tfp.optimizer.lbfgs_minimize(
+                func,
+                initial_position=init_params,
+                max_iterations=epochs,
+            )
+            func.assign_new_model_parameters(results.position)
+        else:
+            self.model.fit(np.array(x_train), np.array(x_train), epochs=epochs)
+
+    def recursive_encode(self, embeddings: List[np.array]) -> List[np.array]:
+        if len(embeddings) > 1:
+            embeddings_ = list()
+            errors = list()
+            for i in range(0, len(embeddings), 2):
+                embeddings_.append(self.encode(embeddings[i], embeddings[i + 1]))
+                errors.append(
+                    self.loss.call(
+                        np.concatenate([embeddings[i], embeddings[i + 1]]),
+                        np.concatenate(self.decode(embeddings_[i // 2])),
+                    ).numpy()
+                )
+            if len(embeddings) % 2 == 1:
+                embeddings_.append(embeddings[-1])
+                errors.append(0)
+            embeddings = embeddings_
+
+            while len(embeddings) > 1:
+                min_error = float("inf")
+                best_position = -1
+                for i in range(len(embeddings) - 1):
+                    error = sum(errors[i : i + 1]) / 2
+                    if error < min_error:
+                        min_error = error
+                        best_position = i
+                embedding = self.encode(
+                    embeddings[best_position], embeddings[best_position + 1]
+                )
+                error = self.loss.call(
+                    np.concatenate([embeddings[best_position], embeddings[i + 1]]),
+                    np.concatenate(self.decode(embedding)),
+                )
+                embeddings = (
+                    embeddings[:best_position]
+                    + [embedding]
+                    + embeddings[best_position + 2 :]
+                )
+                errors = errors[:best_position] + [error] + errors[best_position + 2 :]
+
+        return embeddings[0]

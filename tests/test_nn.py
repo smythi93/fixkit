@@ -34,7 +34,7 @@ class TestNN(unittest.TestCase):
                     encoder.decode(encoder.encode(data_1, data_2)),
                     atol=0.7,
                 )
-                if not close.all():
-                    print(data_1, data_2)
-                    print(encoder.decode(encoder.encode(data_1, data_2)))
-                    print()
+                self.assertTrue(close.all())
+        encoding = encoder.recursive_encode(
+            [[0, 0], [0, 1], [1, 0], [1, 1], [1, 0], [1, 1]]
+        )
