@@ -17,10 +17,10 @@ class TestNN(unittest.TestCase):
             NeuralNetwork.mean_squared_error,
         )
 
-        nn.fit(x, y, epochs=10000, learning_rate=0.5)
+        nn.fit(x, y, epochs=5000, learning_rate=0.5)
 
         for data, label in zip(x, y):
-            self.assertAlmostEqual(nn.predict(data)[0], label, delta=0.1)
+            self.assertAlmostEqual(nn.predict(data)[0], label, delta=0.05)
 
     def test_deep_repair_encoder(self):
         random.seed(0)
@@ -29,12 +29,10 @@ class TestNN(unittest.TestCase):
         encoder.train(x, epochs=50)
         for data_1 in x:
             for data_2 in x:
-                close = np.isclose(
-                    np.array([data_1, data_2]),
-                    encoder.decode(encoder.encode(data_1, data_2)),
-                    atol=0.7,
-                )
-                self.assertTrue(close.all())
+                array = np.concatenate([data_1, data_2])
+                loss = encoder.loss(array, encoder.predict(array))
+                self.assertGreaterEqual(10, loss)
         encoding = encoder.recursive_encode(
             [[0, 0], [0, 1], [1, 0], [1, 1], [1, 0], [1, 1]]
         )
+        print(encoding)

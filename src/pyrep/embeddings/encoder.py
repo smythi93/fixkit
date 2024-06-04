@@ -1,6 +1,7 @@
 import random
 from typing import Callable, Tuple, List, Optional
 import numpy as np
+import scipy
 
 from pyrep.logger import LOGGER
 
@@ -53,6 +54,7 @@ class Layer:
     def linear(x):
         return x
 
+    # noinspection PyUnusedLocal
     @staticmethod
     def linear_derivative(x):
         return 1
@@ -69,12 +71,25 @@ class Layer:
     def forward(self, x):
         return self.activation(np.dot(np.atleast_2d(x), self.weights) + self.biases)
 
+    def get_grads(
+        self,
+        x: np.array,
+        error: np.array,
+        output: np.array,
+    ):
+        delta = error * self.derivative(output)
+        return (
+            np.dot(delta, self.weights.T),
+            np.dot(np.atleast_2d(x).T, delta),
+            np.sum(delta, axis=0),
+        )
+
     def backward(
         self, x: np.array, error: np.array, output: np.array, learning_rate: float = 0.1
     ):
-        delta = error * self.derivative(output)
-        self.weights -= learning_rate * np.dot(np.atleast_2d(x).T, delta)
-        self.biases -= learning_rate * np.sum(delta, axis=0)
+        delta, d_w, d_b = self.get_grads(x, error, output)
+        self.weights -= learning_rate * d_w
+        self.biases -= learning_rate * d_b
         return delta
 
 
@@ -188,12 +203,20 @@ class AutoEncoder(NeuralNetwork):
     @staticmethod
     def loss(y_true, y_pred):
         x_l, x_r = np.split(y_true, 2)
-        x_l_pred, x_r_pred = np.split(y_pred, 2)
+        x_l_pred, x_r_pred = np.split(y_pred.flatten(), 2)
         return np.linalg.norm(x_l - x_l_pred) ** 2 + np.linalg.norm(x_r - x_r_pred) ** 2
 
-    @staticmethod
-    def loss_derivative(y_true, y_pred):
-        return y_pred - y_true
+    def loss_derivative(self, y_true, y_pred):
+        loss_derivative = 2 * (y_pred - y_true)
+        decoder_d, decoder_dw, decoder_db = self.decoder.get_grads(
+            self.outputs[1], loss_derivative, self.outputs[2]
+        )
+        _, encoder_dw, encoder_db = self.encoder.get_grads(
+            self.outputs[0], decoder_d, self.outputs[1]
+        )
+        return np.concatenate(
+            [encoder_dw.flatten(), decoder_dw.flatten(), encoder_db, decoder_db]
+        )
 
     def encode(self, x_l, x_r):
         return self.encoder.forward(np.concatenate([x_l, x_r]))
@@ -204,7 +227,9 @@ class AutoEncoder(NeuralNetwork):
 
 class DeepRepairAutoEncoder(AutoEncoder):
     def __init__(self, n):
-        super().__init__(n, encoder_activation=Layer.tanh, decoder_activation=Layer.linear)
+        super().__init__(
+            n, encoder_activation=Layer.tanh, decoder_activation=Layer.linear
+        )
         self.n = n
 
     def encode(self, x_l, x_r):
@@ -212,77 +237,64 @@ class DeepRepairAutoEncoder(AutoEncoder):
 
     def decode(self, x):
         return np.split(self.decoder.forward(x)[0], 2)
-    def function_factory(self, x_train):
-        shapes = tf.shape_n(self.model.trainable_variables)
-        n_tensors = len(shapes)
 
-        count = 0
-        idx = list()
-        part = list()
+    def flatten(self):
+        return np.concatenate(
+            [
+                self.encoder.weights.flatten(),
+                self.decoder.weights.flatten(),
+                self.encoder.biases.flatten(),
+                self.decoder.biases.flatten(),
+            ]
+        )
 
-        for i, shape in enumerate(shapes):
-            n = np.prod(shape)
-            idx.append(tf.reshape(tf.range(count, count + n, dtype=tf.int32), shape))
-            part.extend([i] * n)
-            count += n
+    def reconstruct(self, flat: np.array):
+        size = 2 * self.n**2
+        self.encoder.weights = flat[:size].reshape((2 * self.n, self.n))
+        self.decoder.weights = flat[size : 2 * size].reshape((self.n, 2 * self.n))
+        self.encoder.biases = flat[2 * size : 2 * size + self.n]
+        self.decoder.biases = flat[2 * size + self.n :]
 
-        part = tf.constant(part)
+    def optimize_loss(self, flat: np.array, x_train: np.array):
+        self.reconstruct(flat)
+        loss = 0
+        for x in x_train:
+            loss += self.loss(x, self.predict(x))
+        return loss // len(x_train)
 
-        @tf.function
-        def assign_new_model_parameters(params_1d):
-            params = tf.dynamic_partition(params_1d, part, n_tensors)
-            for j, (s, param) in enumerate(zip(shapes, params)):
-                self.model.trainable_variables[j].assign(tf.reshape(param, s))
+    def optimize_loss_derivative(self, flat: np.array, x_train: np.array):
+        self.reconstruct(flat)
+        loss = np.zeros_like(flat)
+        for x in x_train:
+            loss += self.loss_derivative(x, self.predict(x))
+        return loss // len(x_train)
 
-        @tf.function
-        def f(params_1d):
-            with tf.GradientTape() as tape:
-                assign_new_model_parameters(params_1d)
-                loss_value = self.loss(self.model(x_train, training=True), x_train)
-            grads = tape.gradient(loss_value, self.model.trainable_variables)
-            grads = tf.dynamic_stitch(idx, grads)
-            f.iter.assign_add(1)
-            tf.print("Iter:", f.iter, "loss:", loss_value)
-            tf.py_function(f.history.append, inp=[loss_value], Tout=[])
-            return loss_value, grads
-
-        f.iter = tf.Variable(0)
-        f.idx = idx
-        f.part = part
-        f.shapes = shapes
-        f.assign_new_model_parameters = assign_new_model_parameters
-        f.history = []
-
-        return f
-
-    def train(self, x, epochs=50, lbfgs=True):
+    def train(self, x, epochs=50, display=10):
         x_train = []
         for data_1 in x:
             for data_2 in x:
                 x_train.append(np.concatenate([data_1, data_2]))
-        if lbfgs:
-            func = self.function_factory(np.array(x_train))
-            init_params = tf.dynamic_stitch(func.idx, self.model.trainable_variables)
-            results = tfp.optimizer.lbfgs_minimize(
-                func,
-                initial_position=init_params,
-                max_iterations=epochs,
-            )
-            func.assign_new_model_parameters(results.position)
-        else:
-            self.model.fit(np.array(x_train), np.array(x_train), epochs=epochs)
+        result, f, _ = scipy.optimize.fmin_l_bfgs_b(
+            self.optimize_loss,
+            self.flatten(),
+            fprime=self.optimize_loss_derivative,
+            args=(x_train,),
+            maxiter=epochs,
+            disp=display,
+        )
+        self.reconstruct(result)
 
     def recursive_encode(self, embeddings: List[np.array]) -> List[np.array]:
         if len(embeddings) > 1:
             embeddings_ = list()
             errors = list()
             for i in range(0, len(embeddings), 2):
-                embeddings_.append(self.encode(embeddings[i], embeddings[i + 1]))
+                embeddings_.append(self.encode(embeddings[i], embeddings[i + 1])[0])
                 errors.append(
-                    self.loss.call(
+                    self.loss(
                         np.concatenate([embeddings[i], embeddings[i + 1]]),
                         np.concatenate(self.decode(embeddings_[i // 2])),
-                    ).numpy()
+                    )
                 )
             if len(embeddings) % 2 == 1:
                 embeddings_.append(embeddings[-1])
@@ -299,9 +311,11 @@ class DeepRepairAutoEncoder(AutoEncoder):
                         best_position = i
                 embedding = self.encode(
                     embeddings[best_position], embeddings[best_position + 1]
-                )
-                error = self.loss.call(
-                    np.concatenate([embeddings[best_position], embeddings[i + 1]]),
+                )[0]
+                error = self.loss(
+                    np.concatenate(
+                        [embeddings[best_position], embeddings[best_position + 1]]
+                    ),
                     np.concatenate(self.decode(embedding)),
                 )
                 embeddings = (
