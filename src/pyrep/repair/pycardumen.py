@@ -160,14 +160,14 @@ class PyCardumen(GeneticRepair):
         candidate = selection.clone()
         for location in self.suggestions:
             if self.should_mutate(location.weight):
-                candidate.mutations.append(Replace(location.identifier, self.choices))
-        return [candidate]
-
-    # TODO: die haben location filter local, package, global was guter python äquivalent?
-    # Würde gerne auf File Ebene bleiben und nicht die AST durchsuchen (falls wir auf Class Ebene gehen)
-    def filter_template_pool(
-        self, location: str, file: str, return_type: str = "return_type"
-    ) -> List[Template]:
+                candidate.mutations.append(
+                    Replace(location.identifier, self.choices)
+                )
+        return [candidate]  
+    
+    #TODO: die haben location filter local, package, global was guter python äquivalent? local (same file), folder, global
+    #Würde gerne auf File Ebene bleiben und nicht die AST durchsuchen (falls wir auf Class Ebene gehen)
+    def filter_template_pool(self, location: str, file: str, return_type: str = "return_type") -> List[Template]:
         pool: List[Template] = self.template_pool
         pool = [tmpl for tmpl in pool if tmpl.return_type == return_type]
         if location == "local":
