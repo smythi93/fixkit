@@ -2,7 +2,7 @@ import ast
 import random
 
 from copy import deepcopy
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from itertools import combinations, chain
 
 #Problems: Python not type based -> dadurch templates oft quatsch
@@ -21,16 +21,36 @@ class Template:
         """
         Inits the Template by collecting all Nodes of Variables.
         """
-        self.statement = deepcopy(statement)
+        self.statement = statement
         collector = VarNodeCollector()
         collector.visit(self.statement)
         self.nodes = collector.nodes
+        #original_vars used for selecting a Template from the Template Pool
+        #könnte auch ein set sein?
+        self.original_vars = []
+        for node in self.nodes:
+            if isinstance(node, ast.Name):
+                self.original_vars.append(node.id)
+            if isinstance(node, ast.arg):
+                self.original_vars.append(node.arg)
+        #TODO: Vorbereitung falls wir das wirklich benutzen
+        self.return_type = "return_type"
+        #TODO: keine ahnung was das sein soll -> Type from ast.Node exampe if , return
+        self.target_code_type = "target_code_type"
+        #TODO: Für filtering by location
+        self.file = "file"
     
     def apply_Changes(self, new_vars: List) -> ast.AST:
         """
         Applys the new Variables to the Statement and returns the changed Statement
         """
-        assert(len(self.nodes) == len(new_vars))
+        #TODO: I guess we have to do this copy stuff otherwise we cant reuse the Template or we have to run the VarNodeCollector everytime -> what is faster??
+        #we also have to copy the nodes
+        #i think its cleaner to run the collector all the time just for readability
+        #oder kein copy stuff hier sondern sagen bevor applyChanges mach eine deepcopy von der template
+        #oder ich merke die ursprünglichen einfach
+        
+        assert len(self.nodes) == len(new_vars)
         for node in self.nodes:
             var = random.choice(new_vars)
             new_vars.remove(var)
@@ -38,7 +58,9 @@ class Template:
                 node.id = var
             if isinstance(node, ast.arg):
                 node.arg = var
-
+        
+        #Why do we do this:
+        #In case we use the same template multiple times in one repair on different fault points -> sonst könnte sich
         return self.statement
 
 class VarNodeCollector(ast.NodeVisitor):
@@ -81,7 +103,7 @@ class VarNamesCollector(ast.NodeVisitor):
         self.vars.append(node.id)
         self.generic_visit(node)
 
-class 
+
 class ProbabilisticModel:
     """
     Creates a Probabilistic Model for usage of any given combinations of vars in the Program.
@@ -89,25 +111,47 @@ class ProbabilisticModel:
     """
     def __init__(self, statements: Dict[int, ast.AST]) -> None:
         self.statements = statements
-        self.probabilities: Dict[:int] = dict()
+        self.probabilities: Dict[Tuple[str, ...], float] = dict()
         self.createModel()
 
-    def createModel(self):
+    def createModel(self) -> None:
         for statement in self.statements.values():
             collector = VarNamesCollector()
             collector.visit(statement)
             vars = collector.vars
-            all_combinations = [comb for i in range(1, len(vars) + 1) for comb in combinations(vars, i)]
-            #all_combinations = list(chain.from_iterable(combinations(vars, i) for i in range(1, len(vars) + 1)))
+            all_combinations = chain.from_iterable(combinations(vars, i) for i in range(1, len(vars) + 1))
             for combination in all_combinations:
-                #combination = repr(combination)
-                print(combination)
                 if combination not in self.probabilities.keys():
-                    pass
+                    x, y = self.checkCombination(combination)
+                    try:
+                        probability = x / y
+                    except ZeroDivisionError:
+                        probability = 0.0
+                    self.probabilities[combination] = probability
 
+    #Was passiert wenn statement a = a +1
+    #dann zweimal a wird nicht spezifiziert in paper
+    #wird momentan ignoriert gehen davon aus das die element unique sind!!!
+    def checkCombination(self, combination: List[str]) -> Tuple[int, int]:
+        """
+        Checks all the Statement if it contains the combination 
+        or if the statment has the same number of vars as the combination
+        """
+        same_combination = 0
+        same_number_of_vars = 0
+        for statement in self.statements.values():
+            visitor = VarNamesCollector()
+            visitor.visit(statement)
+            #Checks if the list contains the same elements -> elements need to be unique and hashable
+            if set(combination) == set(visitor.vars):
+                same_combination+=1
+                same_number_of_vars+=1
+                continue
+            
+            if len(visitor.vars) == len(combination):
+                same_number_of_vars+=1
+        
+        return (same_combination, same_number_of_vars)
+    
 
-
-
-
-
-
+#TODO: Probabilistic Model with different Scopes taken into consideration

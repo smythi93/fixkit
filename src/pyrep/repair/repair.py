@@ -146,6 +146,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         self.minimizer.fitness = self.fitness
         self.line_mode = line_mode
         self.strategy = self.get_search_strategy()
+        self.statement_finder: StatementFinder = None
 
     def get_search_strategy(self) -> SearchStrategy:
         return EvolutionaryStrategy(
@@ -155,8 +156,9 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
             mutate=self.mutate_population,
         )
 
-    @staticmethod
+    
     def get_initial_candidate(
+        self,
         src: os.PathLike, excludes: Optional[str], line_mode: bool = False
     ) -> GeneticCandidate:
         """
@@ -167,12 +169,12 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         :return GeneticCandidate: The initial candidate.
         """
         LOGGER.info("Searching for statements in the source.")
-        statement_finder = StatementFinder(
+        self.statement_finder = StatementFinder(
             src=Path(src), excludes=excludes, line_mode=line_mode
         )
-        statement_finder.search_source()
+        self.statement_finder.search_source()
         LOGGER.info("Building the initial candidate.")
-        return GeneticCandidate.from_candidate(statement_finder.build_candidate())
+        return GeneticCandidate.from_candidate(self.statement_finder.build_candidate())
 
     @staticmethod
     @abc.abstractmethod

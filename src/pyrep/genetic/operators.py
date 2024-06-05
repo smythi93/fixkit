@@ -650,6 +650,11 @@ class Variable_Collector(ast.NodeVisitor):
         self.scope_stack[-1].add(node.id)
         self.generic_visit(node)
 
+    def visit_arg(self, node: ast.arg):
+        if not node.arg == "self":
+            self.scope_stack[-1].add(node.arg)
+        self.generic_visit(node)
+
     def visit_FunctionDef(self, node: ast.FunctionDef):
         self.visit_Helper(node)
     
@@ -658,7 +663,7 @@ class Variable_Collector(ast.NodeVisitor):
     
     def visit_ClassDef(self, node: ast.ClassDef):
         self.visit_Helper(node)
-    
+
     def visit_Helper(self, node):
         #opening new scope
         self.scope_stack.append(set())
