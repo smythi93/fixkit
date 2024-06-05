@@ -2,21 +2,22 @@
 The pycardumen module provides the necessary tools to repair a fault using Cardumen.
 """
 
+import ast
 import os
 import random
-import ast
 from typing import List, Optional, Collection
 
-from pyrep.candidate import Candidate, GeneticCandidate
+from pyrep.candidate import GeneticCandidate
 from pyrep.fitness.metric import GenProgFitness
 from pyrep.genetic.crossover import OnePointCrossover
 from pyrep.genetic.minimize import DDMutationMinimizer
 from pyrep.genetic.operators import Replace
+from pyrep.genetic.selection import UniversalSelection, Selection
 from pyrep.genetic.templates import Template, ProbabilisticModel, VarNamesCollector
 from pyrep.localization import Localization
 from pyrep.localization.location import WeightedLocation
 from pyrep.repair.repair import GeneticRepair
-from pyrep.genetic.selection import UniversalSelection, Selection
+
 
 class PyCardumen(GeneticRepair):
     """
@@ -25,7 +26,7 @@ class PyCardumen(GeneticRepair):
 
     def __init__(
         self,
-        initial_candidate: Candidate,
+        src: os.PathLike,
         localization: Localization,
         population_size: int,
         max_generations: int,
@@ -36,6 +37,7 @@ class PyCardumen(GeneticRepair):
         w_pos_t: float = 1,
         w_neg_t: float = 10,
         is_t4p: bool = False,
+        excludes: Optional[List[str]] = None,
         line_mode: bool = False,
     ):
         """
@@ -53,7 +55,7 @@ class PyCardumen(GeneticRepair):
         """
         self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t)
         super().__init__(
-            initial_candidate=initial_candidate,
+            src=src,
             fitness=self.metric,
             localization=localization,
             population_size=population_size,
@@ -66,14 +68,15 @@ class PyCardumen(GeneticRepair):
             workers=workers,
             out=out,
             is_t4p=is_t4p,
+            excludes=excludes,
             line_mode=line_mode,
         )
 
         self.template_pool: List[Template] = list()
-        for statement in initial_candidate.statements.values():
+        for statement in self.initial_candidate.statements.values():
             self.template_pool.append(Template(statement))
-        
-        self.model = ProbabilisticModel(initial_candidate.statements)
+
+        self.model = ProbabilisticModel(self.initial_candidate.statements)
 
     @classmethod
     def from_source(
@@ -121,7 +124,7 @@ class PyCardumen(GeneticRepair):
         :return PyGenProg: The GenProg repair created from the source.
         """
         return PyCardumen(
-            initial_candidate=PyCardumen.get_initial_candidate(src, excludes, line_mode),
+            src=src,
             localization=localization,
             population_size=population_size,
             max_generations=max_generations,
@@ -132,6 +135,7 @@ class PyCardumen(GeneticRepair):
             w_pos_t=w_pos_t,
             w_neg_t=w_neg_t,
             is_t4p=is_t4p,
+            excludes=excludes,
             line_mode=line_mode,
         )
 
@@ -146,7 +150,7 @@ class PyCardumen(GeneticRepair):
             self.localization.failing,
         )
         return suggestions
-    
+
     def mutate(self, selection: GeneticCandidate) -> Collection[GeneticCandidate]:
         """
         Mutate a candidate to create a new candidate.
@@ -156,19 +160,19 @@ class PyCardumen(GeneticRepair):
         candidate = selection.clone()
         for location in self.suggestions:
             if self.should_mutate(location.weight):
-                candidate.mutations.append(
-                    Replace(location.identifier, self.choices)
-                )
-        return [candidate]  
-    
-    #TODO: die haben location filter local, package, global was guter python äquivalent?
-    #Würde gerne auf File Ebene bleiben und nicht die AST durchsuchen (falls wir auf Class Ebene gehen)
-    def filter_template_pool(self, location: str, file: str, return_type: str = "return_type") -> List[Template]:
+                candidate.mutations.append(Replace(location.identifier, self.choices))
+        return [candidate]
+
+    # TODO: die haben location filter local, package, global was guter python äquivalent?
+    # Würde gerne auf File Ebene bleiben und nicht die AST durchsuchen (falls wir auf Class Ebene gehen)
+    def filter_template_pool(
+        self, location: str, file: str, return_type: str = "return_type"
+    ) -> List[Template]:
         pool: List[Template] = self.template_pool
         pool = [tmpl for tmpl in pool if tmpl.return_type == return_type]
         if location == "local":
             pool = [tmpl for tmpl in pool if tmpl.file == file]
-        
+
         return pool
 
     def selecting_template(self, statement: ast.AST) -> Template:
@@ -177,20 +181,21 @@ class PyCardumen(GeneticRepair):
         collector.visit(statement)
         var_statement = collector.vars
         weights = []
-        #doesnt have the template of the statment a 1.0 probability??
+        # doesnt have the template of the statment a 1.0 probability??
         for template in self.template_pool:
             var_template = template.original_vars
             print(var_statement)
             print(var_template)
             print(sum(var in var_statement for var in var_template))
             print(len(var_template))
-            weights.append(sum(var in var_statement for var in var_template)/len(var_template))
+            weights.append(
+                sum(var in var_statement for var in var_template) / len(var_template)
+            )
 
         for tmpl, weight in zip(self.template_pool, weights):
-            print(ast.unparse(tmpl.statement),weight)
+            print(ast.unparse(tmpl.statement), weight)
 
         return random.choices(self.template_pool, weights, k=1)[0]
 
 
 __all__ = ["PyCardumen"]
-

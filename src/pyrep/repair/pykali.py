@@ -4,20 +4,26 @@ pykali is not really used for repairs. It is used to find under-specified bugs a
 """
 
 import os
-import random
 from typing import List, Optional
 
-from pyrep.candidate import Candidate, GeneticCandidate
+from pyrep.candidate import GeneticCandidate
 from pyrep.fitness.metric import GenProgFitness
 from pyrep.genetic.crossover import OnePointCrossover
 from pyrep.genetic.minimize import DDMutationMinimizer
-from pyrep.genetic.operators import (Delete, ModifyIfToFalse, ModifyIfToTrue, 
-                                     InsertReturn0, InsertReturnNone, InsertReturnString, 
-                                     InsertReturnTuple, InsertReturnList)
+from pyrep.genetic.operators import (
+    Delete,
+    ModifyIfToFalse,
+    ModifyIfToTrue,
+    InsertReturn0,
+    InsertReturnNone,
+    InsertReturnString,
+    InsertReturnTuple,
+    InsertReturnList,
+)
+from pyrep.genetic.selection import UniversalSelection, Selection
 from pyrep.localization import Localization
 from pyrep.localization.location import WeightedLocation
 from pyrep.repair.repair import GeneticRepair
-from pyrep.genetic.selection import UniversalSelection, Selection
 from pyrep.search.search import SearchStrategy, ExhaustiveStrategy
 
 
@@ -28,7 +34,7 @@ class PyKali(GeneticRepair):
 
     def __init__(
         self,
-        initial_candidate: Candidate,
+        src: os.PathLike,
         localization: Localization,
         max_generations: int,
         w_mut: float,
@@ -38,6 +44,7 @@ class PyKali(GeneticRepair):
         w_pos_t: float = 1,
         w_neg_t: float = 10,
         is_t4p: bool = False,
+        excludes: Optional[List[str]] = None,
         line_mode: bool = False,
     ):
         """
@@ -53,30 +60,40 @@ class PyKali(GeneticRepair):
         :param float w_pos_t: The weight for the positive test cases.
         :param float w_neg_t: The weight for the negative test cases.
         """
-        self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t) #still uses GenProgFitness -> ??
+        self.metric = GenProgFitness(
+            set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t
+        )  # still uses GenProgFitness -> ??
         super().__init__(
-            initial_candidate=initial_candidate,
-            fitness=self.metric, 
+            src=src,
+            fitness=self.metric,
             localization=localization,
             population_size=1,
-            max_generations=max_generations, 
+            max_generations=max_generations,
             w_mut=w_mut,
-            operators=[Delete, ModifyIfToTrue, ModifyIfToFalse, 
-                       InsertReturnList, InsertReturnTuple, InsertReturn0, 
-                       InsertReturnString, InsertReturnNone], 
+            operators=[
+                Delete,
+                ModifyIfToTrue,
+                ModifyIfToFalse,
+                InsertReturnList,
+                InsertReturnTuple,
+                InsertReturn0,
+                InsertReturnString,
+                InsertReturnNone,
+            ],
             selection=selection or UniversalSelection(),
             crossover_operator=OnePointCrossover(),
             minimizer=DDMutationMinimizer(),
             workers=workers,
             out=out,
             is_t4p=is_t4p,
+            excludes=excludes,
             line_mode=line_mode,
         )
 
     @classmethod
     def from_source(
         cls, src: os.PathLike, excludes: Optional[List[str]] = None, *args, **kwargs
-    ) -> "GeneticRepair": 
+    ) -> "GeneticRepair":
         """
         Abstract method for creating a genetic repair from the source.
         :param os.PathLike src: The source directory of the project.
@@ -101,7 +118,7 @@ class PyKali(GeneticRepair):
         w_neg_t: float = 10,
         is_t4p: bool = False,
         line_mode: bool = False,
-    ) -> "PyKali": 
+    ) -> "PyKali":
         """
         Create a Kali repair from the source.
         :param os.PathLike src: The source directory of the project.
@@ -118,7 +135,7 @@ class PyKali(GeneticRepair):
         :return PyGenProg: The GenProg repair created from the source.
         """
         return PyKali(
-            initial_candidate=PyKali.get_initial_candidate(src, excludes, line_mode),
+            src=src,
             localization=localization,
             max_generations=max_generations,
             w_mut=w_mut,
@@ -128,6 +145,7 @@ class PyKali(GeneticRepair):
             w_pos_t=w_pos_t,
             w_neg_t=w_neg_t,
             is_t4p=is_t4p,
+            excludes=excludes,
             line_mode=line_mode,
         )
 
@@ -142,13 +160,11 @@ class PyKali(GeneticRepair):
             self.localization.failing,
         )
         return suggestions
-    
+
     def get_search_strategy(self) -> SearchStrategy:
         return ExhaustiveStrategy(
-            operators=self.operator,
-            suggestions=self.localize() # or self.suggestions
+            operators=self.operator, suggestions=self.localize()  # or self.suggestions
         )
-
 
 
 __all__ = ["PyKali"]

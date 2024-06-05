@@ -24,7 +24,7 @@ class PyGenProg(GeneticRepair):
 
     def __init__(
         self,
-        initial_candidate: Candidate,
+        src: os.PathLike,
         localization: Localization,
         population_size: int,
         max_generations: int,
@@ -35,6 +35,7 @@ class PyGenProg(GeneticRepair):
         w_pos_t: float = 1,
         w_neg_t: float = 10,
         is_t4p: bool = False,
+        excludes: Optional[str] = None,
         line_mode: bool = False,
     ):
         """
@@ -52,7 +53,7 @@ class PyGenProg(GeneticRepair):
         """
         self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t)
         super().__init__(
-            initial_candidate=initial_candidate,
+            src=src,
             fitness=self.metric,
             localization=localization,
             population_size=population_size,
@@ -65,6 +66,7 @@ class PyGenProg(GeneticRepair):
             workers=workers,
             out=out,
             is_t4p=is_t4p,
+            excludes=excludes,
             line_mode=line_mode,
         )
 
@@ -113,7 +115,7 @@ class PyGenProg(GeneticRepair):
         :param float w_neg_t: The weight for the negative test cases.
         :return PyGenProg: The GenProg repair created from the source.
         """
-        
+
         return PyGenProg(
             initial_candidate=PyGenProg.get_initial_candidate(src, excludes, line_mode),
             localization=localization,
@@ -196,9 +198,7 @@ class SingleMutationPyGenProg(PyGenProg):
         :return SingleMutationPyGenProg: The GenProg repair created from the source.
         """
         return SingleMutationPyGenProg(
-            initial_candidate=SingleMutationPyGenProg.get_initial_candidate(
-                src, excludes, line_mode
-            ),
+            src=src,
             localization=localization,
             population_size=population_size,
             max_generations=max_generations,
@@ -209,6 +209,7 @@ class SingleMutationPyGenProg(PyGenProg):
             w_pos_t=w_pos_t,
             w_neg_t=w_neg_t,
             is_t4p=is_t4p,
+            excludes=excludes,
             line_mode=line_mode,
         )
 

@@ -76,7 +76,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
 
     def __init__(
         self,
-        initial_candidate: GeneticCandidate,
+        src: os.PathLike,
         fitness: Fitness,
         localization: Localization,
         population_size: int,
@@ -92,6 +92,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         is_t4p: bool = False,
         is_system_test: bool = False,
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
+        excludes: Optional[str] = None,
         line_mode: bool = False,
     ):
         """
@@ -116,7 +117,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         :param bool line_mode: True if the line mode is enabled, False otherwise.
         """
         super().__init__(localization, out)
-        self.initial_candidate = initial_candidate
+        self.statement_finder: StatementFinder = None
+        self.initial_candidate = self.get_initial_candidate(src, excludes, line_mode)
         self.population: Population = [self.initial_candidate]
         self.choices: List[int] = list(self.initial_candidate.statements.keys())
         if is_t4p:
@@ -146,7 +148,6 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         self.minimizer.fitness = self.fitness
         self.line_mode = line_mode
         self.strategy = self.get_search_strategy()
-        self.statement_finder: StatementFinder = None
 
     def get_search_strategy(self) -> SearchStrategy:
         return EvolutionaryStrategy(
@@ -156,10 +157,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
             mutate=self.mutate_population,
         )
 
-    
     def get_initial_candidate(
-        self,
-        src: os.PathLike, excludes: Optional[str], line_mode: bool = False
+        self, src: os.PathLike, excludes: Optional[str], line_mode: bool = False
     ) -> GeneticCandidate:
         """
         Get the initial candidate from the source.
