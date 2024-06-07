@@ -6,15 +6,15 @@ from utils import SUBJECTS, REP, SFL
 
 import tests4py.api as t4p
 
-from pyrep.constants import DEFAULT_EXCLUDES
-from pyrep.genetic.operators import Replace
-from pyrep.localization.coverage import CoverageLocalization
-from pyrep.localization.t4p import Tests4PyLocalization
-from pyrep.repair.patch import write_patches
-from pyrep.repair.pygenprog import PyGenProg, SingleMutationPyGenProg
-from pyrep.repair.pykali import PyKali
-from pyrep.logger import debug_logger
-
+from fixkit.constants import DEFAULT_EXCLUDES
+from fixkit.genetic.operators import Replace
+from fixkit.localization.coverage import CoverageLocalization
+from fixkit.localization.t4p import Tests4PyLocalization
+from fixkit.repair.patch import write_patches
+from fixkit.repair.pygenprog import PyGenProg, SingleMutationPyGenProg
+from fixkit.repair.pykali import PyKali
+from fixkit.logger import debug_logger
+from utils import SUBJECTS, REP, SFL
 
 
 class TestRepair(unittest.TestCase):
