@@ -1,5 +1,5 @@
 """
-This module contains the constants used in the pyrep package.
+This module contains the constants used in the fixkit package.
 """
 
 import os

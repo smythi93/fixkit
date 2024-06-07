@@ -5,8 +5,8 @@ The minimize module provides the necessary tools to minimize a candidate.
 import abc
 from typing import List, Optional
 
-from pyrep.candidate import Candidate, GeneticCandidate
-from pyrep.fitness.engine import Engine
+from fixkit.candidate import Candidate, GeneticCandidate
+from fixkit.fitness.engine import Engine
 
 
 class Minimizer(abc.ABC):

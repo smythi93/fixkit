@@ -8,21 +8,21 @@ import random
 from pathlib import Path
 from typing import Collection, List, Type, Optional, Any
 
-from pyrep.candidate import Candidate, GeneticCandidate
-from pyrep.constants import DEFAULT_WORK_DIR
-from pyrep.fitness.engine import Tests4PyEngine, Engine, Tests4PySystemTestEngine
-from pyrep.fitness.metric import Fitness
-from pyrep.genetic.crossover import Crossover, OnePointCrossover
-from pyrep.genetic.minimize import MutationMinimizer, DefaultMutationMinimizer
-from pyrep.genetic.operators import MutationOperator
-from pyrep.genetic.selection import Selection, RandomSelection
-from pyrep.genetic.types import Population
-from pyrep.localization import Localization
-from pyrep.localization.location import WeightedIdentifier, WeightedLocation
-from pyrep.localization.normalization import normalize
-from pyrep.logger import LOGGER
-from pyrep.search.search import EvolutionaryStrategy, SearchStrategy
-from pyrep.stmt import StatementFinder
+from fixkit.candidate import Candidate, GeneticCandidate
+from fixkit.constants import DEFAULT_WORK_DIR
+from fixkit.fitness.engine import Tests4PyEngine, Engine, Tests4PySystemTestEngine
+from fixkit.fitness.metric import Fitness
+from fixkit.genetic.crossover import Crossover, OnePointCrossover
+from fixkit.genetic.minimize import MutationMinimizer, DefaultMutationMinimizer
+from fixkit.genetic.operators import MutationOperator
+from fixkit.genetic.selection import Selection, RandomSelection
+from fixkit.genetic.types import Population
+from fixkit.localization import Localization
+from fixkit.localization.location import WeightedIdentifier, WeightedLocation
+from fixkit.localization.normalization import normalize
+from fixkit.logger import LOGGER
+from fixkit.search.search import EvolutionaryStrategy, SearchStrategy
+from fixkit.stmt import StatementFinder
 
 
 class Repair(abc.ABC):

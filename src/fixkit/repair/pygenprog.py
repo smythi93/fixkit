@@ -6,15 +6,15 @@ import os
 import random
 from typing import List, Optional, Collection
 
-from pyrep.candidate import Candidate, GeneticCandidate
-from pyrep.fitness.metric import GenProgFitness
-from pyrep.genetic.crossover import OnePointCrossover
-from pyrep.genetic.minimize import DDMutationMinimizer
-from pyrep.genetic.operators import Delete, InsertBoth, Replace
-from pyrep.localization import Localization
-from pyrep.localization.location import WeightedLocation
-from pyrep.repair.repair import GeneticRepair
-from pyrep.genetic.selection import UniversalSelection, Selection
+from fixkit.candidate import Candidate, GeneticCandidate
+from fixkit.fitness.metric import GenProgFitness
+from fixkit.genetic.crossover import OnePointCrossover
+from fixkit.genetic.minimize import DDMutationMinimizer
+from fixkit.genetic.operators import Delete, InsertBoth, Replace
+from fixkit.localization import Localization
+from fixkit.localization.location import WeightedLocation
+from fixkit.repair.repair import GeneticRepair
+from fixkit.genetic.selection import UniversalSelection, Selection
 
 
 class PyGenProg(GeneticRepair):

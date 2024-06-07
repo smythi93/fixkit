@@ -2,8 +2,8 @@
 The localization module provides the necessary tools to localize a fault.
 """
 
-from pyrep.localization import coverage, location, normalization, sflkit
-from pyrep.localization.localization import Localization, LocalizationError
+from fixkit.localization import coverage, location, normalization, sflkit
+from fixkit.localization.localization import Localization, LocalizationError
 
 __all__ = [
     "coverage",

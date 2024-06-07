@@ -1,6 +1,6 @@
 import logging
 
-LOGGER = logging.getLogger("pyrep")
+LOGGER = logging.getLogger("fixkit")
 logging.basicConfig(
     level=logging.INFO,
     format="%(name)s :: %(levelname)-8s :: %(message)s",

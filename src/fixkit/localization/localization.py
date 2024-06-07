@@ -9,8 +9,8 @@ from typing import List, Dict, Optional
 
 from sflkit import Predicate
 
-from pyrep.constants import DEFAULT_WORK_DIR
-from pyrep.localization.location import WeightedLocation
+from fixkit.constants import DEFAULT_WORK_DIR
+from fixkit.localization.location import WeightedLocation
 
 
 class LocalizationError(RuntimeError):

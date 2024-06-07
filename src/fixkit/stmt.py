@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from pyrep.candidate import Candidate
+from fixkit.candidate import Candidate
 
 
 class SearchError(RuntimeError):

@@ -8,8 +8,8 @@ import os
 import shutil
 from pathlib import Path
 
-from pyrep.candidate import Candidate, GeneticCandidate
-from pyrep.genetic.operators import Mutator
+from fixkit.candidate import Candidate, GeneticCandidate
+from fixkit.genetic.operators import Mutator
 
 
 class Transformer(abc.ABC):

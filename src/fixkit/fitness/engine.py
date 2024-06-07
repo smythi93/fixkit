@@ -12,12 +12,12 @@ import tests4py.api as t4p
 from tests4py.api.report import TestReport
 from tests4py.tests.utils import TestResult
 
-from pyrep.candidate import GeneticCandidate
-from pyrep.constants import DEFAULT_WORK_DIR, XML_OUTPUT
-from pyrep.fitness.metric import Fitness
-from pyrep.genetic.operators import MutationOperator
-from pyrep.genetic.transform import MutationTransformer
-from pyrep.genetic.types import Population
+from fixkit.candidate import GeneticCandidate
+from fixkit.constants import DEFAULT_WORK_DIR, XML_OUTPUT
+from fixkit.fitness.metric import Fitness
+from fixkit.genetic.operators import MutationOperator
+from fixkit.genetic.transform import MutationTransformer
+from fixkit.genetic.types import Population
 
 
 class Worker:

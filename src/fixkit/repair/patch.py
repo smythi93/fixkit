@@ -7,9 +7,9 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
-from pyrep.candidate import GeneticCandidate
-from pyrep.constants import DEFAULT_WORK_DIR
-from pyrep.genetic.transform import MutationTransformer
+from fixkit.candidate import GeneticCandidate
+from fixkit.constants import DEFAULT_WORK_DIR
+from fixkit.genetic.transform import MutationTransformer
 
 
 def write_patches(

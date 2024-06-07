@@ -6,7 +6,7 @@ import abc
 import random
 from typing import Optional, Tuple
 
-from pyrep.candidate import GeneticCandidate
+from fixkit.candidate import GeneticCandidate
 
 
 class Crossover(abc.ABC):

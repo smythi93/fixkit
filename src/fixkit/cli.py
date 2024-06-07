@@ -1,5 +1,5 @@
 """
-Command line interface for the pyrep framework.
+Command line interface for the fixkit framework.
 """
 
 import argparse
@@ -16,7 +16,7 @@ def parse_args(args: Sequence[str]) -> argparse.Namespace:
     :return argparse.Namespace: The parsed arguments.
     """
     arguments = argparse.ArgumentParser(
-        description="The access point to the pyrep framework"
+        description="The access point to the fixkit framework"
     )
 
     arguments.add_argument(
@@ -78,7 +78,7 @@ def parse_args(args: Sequence[str]) -> argparse.Namespace:
 
 def main(*args: Sequence[str], stdout: IO = sys.stdout, stderr: IO = sys.stderr):
     """
-    The main entry point for the pyrep framework.
+    The main entry point for the fixkit framework.
     :param Sequence[str] args: The command line arguments.
     :param IO stdout: The standard output stream.
     :param IO stderr: The standard error stream.

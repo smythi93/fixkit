@@ -8,7 +8,7 @@ from typing import List
 
 import numpy.random
 
-from pyrep.candidate import GeneticCandidate
+from fixkit.candidate import GeneticCandidate
 
 
 class Selection(abc.ABC):

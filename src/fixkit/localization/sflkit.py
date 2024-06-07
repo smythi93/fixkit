@@ -9,9 +9,9 @@ from typing import List, Optional, Dict
 import sflkit
 from sflkit import Config
 
-from pyrep.constants import DEFAULT_EXCLUDES, SFLKIT_EVENTS_PATH
-from pyrep.localization.localization import Localization
-from pyrep.localization.location import WeightedLocation
+from fixkit.constants import DEFAULT_EXCLUDES, SFLKIT_EVENTS_PATH
+from fixkit.localization.localization import Localization
+from fixkit.localization.location import WeightedLocation
 
 
 class SFLKitLocalization(Localization):

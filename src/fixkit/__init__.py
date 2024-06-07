@@ -1,8 +1,8 @@
 """
-The pyrep module provides the necessary tools to repair a fault.
+The fixkit module provides the necessary tools to repair a fault.
 """
 
-from pyrep import (
+from fixkit import (
     candidate,
     cli,
     constants,

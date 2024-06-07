@@ -1,11 +1,11 @@
 import abc
 from typing import List, Callable, Optional, Type
 
-from pyrep.candidate import GeneticCandidate
-from pyrep.genetic.operators import MutationOperator
-from pyrep.genetic.types import GeneticFunction, Population
-from pyrep.localization.location import WeightedIdentifier
-from pyrep.logger import LOGGER
+from fixkit.candidate import GeneticCandidate
+from fixkit.genetic.operators import MutationOperator
+from fixkit.genetic.types import GeneticFunction, Population
+from fixkit.localization.location import WeightedIdentifier
+from fixkit.logger import LOGGER
 
 
 class SearchStrategy(abc.ABC):

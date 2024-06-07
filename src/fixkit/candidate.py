@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from typing import Dict, Iterable, Optional, List
 
-from pyrep.genetic.operators import MutationOperator
+from fixkit.genetic.operators import MutationOperator
 
 
 class Candidate:

@@ -11,8 +11,8 @@ from typing import Optional, List, Dict
 
 from sflkit.analysis.spectra import Spectrum
 
-from pyrep.localization.localization import Localization
-from pyrep.localization.location import WeightedLocation
+from fixkit.localization.localization import Localization
+from fixkit.localization.location import WeightedLocation
 
 
 # Regular expression for parsing the context of a coverage line.

@@ -6,7 +6,7 @@ from typing import Optional, List, Dict
 
 from tests4py import sfl
 
-from pyrep.localization.sflkit import SFLKitLocalization
+from fixkit.localization.sflkit import SFLKitLocalization
 
 
 class Tests4PyLocalization(SFLKitLocalization):

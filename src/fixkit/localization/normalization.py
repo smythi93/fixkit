@@ -4,7 +4,7 @@ The normalization module provides the necessary tools to normalize the weights o
 
 from typing import List
 
-from pyrep.localization.location import Weighted
+from fixkit.localization.location import Weighted
 
 
 def absolute_normalize(weighted_locations: List[Weighted]):
