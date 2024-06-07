@@ -5,10 +5,10 @@ from pathlib import Path
 
 import tests4py.api
 
-from pyrep.localization import Localization
-from pyrep.localization.coverage import CoverageLocalization
-from pyrep.localization.sflkit import SFLKitLocalization
-from pyrep.localization.t4p import Tests4PyLocalization
+from fixkit.localization import Localization
+from fixkit.localization.coverage import CoverageLocalization
+from fixkit.localization.sflkit import SFLKitLocalization
+from fixkit.localization.t4p import Tests4PyLocalization
 from utils import SUBJECTS, REP, SFL
 
 

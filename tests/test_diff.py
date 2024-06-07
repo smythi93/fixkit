@@ -1,10 +1,10 @@
 import shutil
 import unittest
 
-from pyrep.candidate import GeneticCandidate
-from pyrep.genetic.operators import Replace
-from pyrep.repair.patch import get_patch
-from pyrep.stmt import StatementFinder
+from fixkit.candidate import GeneticCandidate
+from fixkit.genetic.operators import Replace
+from fixkit.repair.patch import get_patch
+from fixkit.stmt import StatementFinder
 from utils import SUBJECTS, REP
 
 
