@@ -6,10 +6,11 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyrep"
+name = "fixkit"
 version = "0.0.1"
 authors = [
     { name = "Marius Smytzek", email = "marius.smytzek@cispa.de" },
+    { name = "Kai Werk", email = "werkkai@hu-berlin.de" },
     { name = "Martin Eberlein", email = "ebermart@informatik.hu-berlin.de" },
 ]
 description = "PyRep is a collection of automatic program repair approaches in and for Python."
@@ -36,11 +37,11 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/smythi93/pyrep"
-"Bug Tracker" = "https://github.com/smythi93/pyrep/issues"
+"Homepage" = "https://github.com/smythi93/fixkit"
+"Bug Tracker" = "https://github.com/smythi93/fixkit/issues"
 
 [project.scripts]
-pyrep = "pyrep.cli:main"
+fixkit = "fixkit.cli:main"
 
 [project.optional-dependencies]
 test = [

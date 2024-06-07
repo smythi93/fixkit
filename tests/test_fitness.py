@@ -2,7 +2,7 @@ import os
 import shutil
 import unittest
 
-from pyrep.fitness.metric import GenProgFitness
+from fixkit.fitness.metric import GenProgFitness
 from utils import SUBJECTS, REP
 
 
