@@ -38,8 +38,8 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/smythi93/pyrep"
-"Bug Tracker" = "https://github.com/smythi93/pyrep/issues"
+"Homepage" = "https://github.com/smythi93/fixkit"
+"Bug Tracker" = "https://github.com/smythi93/fixkit/issues"
 
 [project.scripts]
 fixkit = "fixkit.cli:main"
