@@ -6,7 +6,7 @@ from pathlib import Path
 import tests4py.api as t4p
 
 from fixkit.candidate import GeneticCandidate
-from fixkit.fitness.engine import Engine, Tests4PyEngine, Tests4PySystemTestEngine
+from fixkit.fitness.engine import Engine, Tests4PyEngine
 from fixkit.fitness.metric import GenProgFitness
 from utils import SUBJECTS, REP, SFL
 
