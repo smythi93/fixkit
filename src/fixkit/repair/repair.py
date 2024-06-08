@@ -186,11 +186,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         return NotImplemented
 
-    def repair(self) -> Population:
-        """
-        Repair the fault using genetic programming.
-        :return Population: The list of candidates that repair (or perform best) the fault.
-        """
+    def prepare_repair(self) -> Population:
         # Localize the faults.
         LOGGER.info("Localizing the faulty code locations.")
         suggestions = self.localize()
@@ -201,6 +197,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         LOGGER.info("Evaluating the fitness for the initial candidate.")
         self.fitness.evaluate(self.population)
 
+    def repair_loop(self):
         if not self.abort():
             # Fill the population and evaluate the fitness.
             LOGGER.info(
@@ -223,6 +220,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         else:
             LOGGER.info("The fault is already repaired.")
 
+    def finalize_repair(self):
         # Minimize the population and return the best candidates.
         fitness = max(c.fitness for c in self.population)
         LOGGER.info("The best candidate has a fitness of %.2f.", fitness)
@@ -231,6 +229,18 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         LOGGER.info("Minimize the best candidates.")
         self.population = self.minimizer.minimize(self.population)
         LOGGER.info("Found %d possible repairs.", len(self.population))
+
+    def repair(self) -> Population:
+        """
+        Repair the fault using genetic programming.
+        :return Population: The list of candidates that repair (or perform best) the fault.
+        """
+        self.prepare_repair()
+
+        self.repair_loop()
+
+        self.finalize_repair()
+
         return self.population
 
     def abort(self) -> bool:

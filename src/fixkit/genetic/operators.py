@@ -48,6 +48,9 @@ class MutationOperator(abc.ABC):
         """
         return NotImplemented
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.identifier})"
+
 
 class Delete(MutationOperator):
     """
@@ -82,6 +85,11 @@ class SelectionMutationOperator(MutationOperator, abc.ABC):
         """
         super().__init__(identifier, choices)
         self.selection_identifier = random.choice(self.choices)
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}({self.identifier},{self.selection_identifier})"
+        )
 
 
 class Insert(SelectionMutationOperator, abc.ABC):
