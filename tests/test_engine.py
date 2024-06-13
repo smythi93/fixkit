@@ -1,4 +1,5 @@
 import os.path
+import os.path
 import shutil
 import unittest
 from pathlib import Path
@@ -6,7 +7,7 @@ from pathlib import Path
 import tests4py.api as t4p
 
 from fixkit.candidate import GeneticCandidate
-from fixkit.fitness.engine import Engine, Tests4PyEngine
+from fixkit.fitness.engine import Engine, Tests4PyEngine, Tests4PySystemTestEngine
 from fixkit.fitness.metric import GenProgFitness
 from utils import SUBJECTS, REP, SFL
 
@@ -84,13 +85,13 @@ class TestTest4PyEngine(unittest.TestCase):
     def run_system_test(self, workers: int):
         fitness = GenProgFitness(
             {
-                os.path.join(SUBJECTS, "tests", "555"),
-                os.path.join(SUBJECTS, "tests", "123"),
-                os.path.join(SUBJECTS, "tests", "534"),
-                os.path.join(SUBJECTS, "tests", "321"),
-                os.path.join(SUBJECTS, "tests", "335"),
+                os.path.join("resources", "tests", "555"),
+                os.path.join("resources", "tests", "123"),
+                os.path.join("resources", "tests", "534"),
+                os.path.join("resources", "tests", "321"),
+                os.path.join("resources", "tests", "335"),
             },
-            {os.path.join(SUBJECTS, "tests", "213")},
+            {os.path.join("resources", "tests", "213")},
         )
         candidates = list()
         for i in range(2 * workers):
@@ -99,7 +100,7 @@ class TestTest4PyEngine(unittest.TestCase):
             self.assertAlmostEqual(0, candidate.fitness, delta=0.000001)
         engine = Tests4PySystemTestEngine(
             fitness,
-            os.path.join(SUBJECTS, "tests"),
+            os.path.join("resources", "tests"),
             workers,
             out=REP,
             raise_on_failure=True,
