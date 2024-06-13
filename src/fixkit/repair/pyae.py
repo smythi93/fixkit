@@ -6,7 +6,6 @@ from src.fixkit.candidate import GeneticCandidate, Candidate
 from src.fixkit.fitness.metric import GenProgFitness
 from src.fixkit.genetic.operators import (
     Delete,
-    InsertBoth,
     InsertBefore,
     InsertAfter,
     MutationOperator,
@@ -83,9 +82,13 @@ class AbstractAE(GeneticRepair, abc.ABC):
     def repair_loop(self):
         model = set()
         equivalent_classes = set()
-        for candidate in self.candidate_repairs():
-            pass
+        for candidate in self.candidate_repairs(model):
+            if not (any(self.equivalent(candidate, c) for c in equivalent_classes)):
+                equivalent_classes.add(candidate)
+                # TODO: execute tests
 
 
 class AE(AbstractAE):
-    pass
+    def repair_strategy(self, model) -> Generator[MutationOperator, None, None]:
+        # TODO: implement
+        pass
