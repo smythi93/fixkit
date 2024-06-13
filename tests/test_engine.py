@@ -81,33 +81,6 @@ class TestTest4PyEngine(unittest.TestCase):
         for candidate in candidates:
             self.assertAlmostEqual(1 / 3, candidate.fitness, delta=0.000001)
 
-    def run_system_test(self, workers: int):
-        fitness = GenProgFitness(
-            {
-                os.path.join(SUBJECTS, "tests", "555"),
-                os.path.join(SUBJECTS, "tests", "123"),
-                os.path.join(SUBJECTS, "tests", "534"),
-                os.path.join(SUBJECTS, "tests", "321"),
-                os.path.join(SUBJECTS, "tests", "335"),
-            },
-            {os.path.join(SUBJECTS, "tests", "213")},
-        )
-        candidates = list()
-        for i in range(2 * workers):
-            candidates.append(GeneticCandidate(Path("tmp", "middle_2")))
-        for candidate in candidates:
-            self.assertAlmostEqual(0, candidate.fitness, delta=0.000001)
-        engine = Tests4PySystemTestEngine(
-            fitness,
-            os.path.join(SUBJECTS, "tests"),
-            workers,
-            out=REP,
-            raise_on_failure=True,
-        )
-        engine.evaluate(candidates)
-        for candidate in candidates:
-            self.assertAlmostEqual(1 / 3, candidate.fitness, delta=0.000001)
-
     def test_engine_1(self):
         self.run_test(1)
 
