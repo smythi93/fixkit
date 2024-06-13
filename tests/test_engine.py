@@ -84,13 +84,13 @@ class TestTest4PyEngine(unittest.TestCase):
     def run_system_test(self, workers: int):
         fitness = GenProgFitness(
             {
-                os.path.join("resources", "tests", "555"),
-                os.path.join("resources", "tests", "123"),
-                os.path.join("resources", "tests", "534"),
-                os.path.join("resources", "tests", "321"),
-                os.path.join("resources", "tests", "335"),
+                os.path.join(SUBJECTS, "tests", "555"),
+                os.path.join(SUBJECTS, "tests", "123"),
+                os.path.join(SUBJECTS, "tests", "534"),
+                os.path.join(SUBJECTS, "tests", "321"),
+                os.path.join(SUBJECTS, "tests", "335"),
             },
-            {os.path.join("resources", "tests", "213")},
+            {os.path.join(SUBJECTS, "tests", "213")},
         )
         candidates = list()
         for i in range(2 * workers):
@@ -99,7 +99,7 @@ class TestTest4PyEngine(unittest.TestCase):
             self.assertAlmostEqual(0, candidate.fitness, delta=0.000001)
         engine = Tests4PySystemTestEngine(
             fitness,
-            os.path.join("resources", "tests"),
+            os.path.join(SUBJECTS, "tests"),
             workers,
             out=REP,
             raise_on_failure=True,
