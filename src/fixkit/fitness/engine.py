@@ -9,7 +9,7 @@ from threading import Thread
 from typing import List, Tuple, Dict
 
 import tests4py.api as t4p
-from tests4py.api.report import TestReport
+from tests4py.api.report import TestReport, SystemtestTestReport
 from tests4py.tests.utils import TestResult
 
 from fixkit.candidate import GeneticCandidate
@@ -172,7 +172,13 @@ class Tests4PyWorker(Worker):
                         raise report.raised
                 else:
                     passing, failing = set(), set()
-                    for test, result in report.results:
+                    if isinstance(report, SystemtestTestReport):
+                        results = [
+                            (test, report.results[test][0]) for test in report.results
+                        ]
+                    else:
+                        results = report.results
+                    for test, result in results:
                         if result == TestResult.PASSING:
                             passing.add(test)
                         elif result == TestResult.FAILING:
@@ -236,6 +242,13 @@ class Tests4PySystemTestWorker(Tests4PyWorker):
             raise_on_failure=raise_on_failure,
         )
         self.tests = tests
+
+    def run_tests(self) -> SystemtestTestReport:
+        """
+        Run the system tests leveraging Tests4Py.
+        :return: The report of the tests.
+        """
+        return t4p.systemtest_test(self.cwd, path_or_str=self.tests)
 
 
 class Tests4PySystemTestEngine(Tests4PyEngine):
