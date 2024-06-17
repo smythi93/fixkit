@@ -10,7 +10,11 @@ from typing import Collection, List, Type, Optional, Any
 
 from fixkit.candidate import Candidate, GeneticCandidate
 from fixkit.constants import DEFAULT_WORK_DIR
-from fixkit.fitness.engine import Tests4PyEngine, Engine, Tests4PySystemTestEngine
+from fixkit.fitness.engine import (
+    Tests4PyEngine,
+    ParallelEngine,
+    Tests4PySystemTestEngine,
+)
 from fixkit.fitness.metric import Fitness
 from fixkit.genetic.crossover import Crossover, OnePointCrossover
 from fixkit.genetic.minimize import MutationMinimizer, DefaultMutationMinimizer
@@ -131,7 +135,9 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
                     fitness=fitness, workers=workers, out=self.out
                 )
         else:
-            self.fitness = Engine(fitness=fitness, workers=workers, out=self.out)
+            self.fitness = ParallelEngine(
+                fitness=fitness, workers=workers, out=self.out
+            )
         self.population_size = population_size
         self.max_generations = max_generations
         self.w_mut = w_mut

@@ -39,7 +39,7 @@ class Fitness(abc.ABC):
         tests = list(self.passing | self.failing)
         try:
             # Run the tests and get the results.
-            process = subprocess.run(
+            subprocess.run(
                 [
                     "python",
                     "-m",

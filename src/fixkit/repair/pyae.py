@@ -1,7 +1,8 @@
 import abc
 import os
-from typing import List, Optional, Generator
+from typing import List, Optional, Generator, Tuple, Set
 
+from fixkit.localization.location import WeightedLocation
 from src.fixkit.candidate import GeneticCandidate, Candidate
 from src.fixkit.fitness.metric import GenProgFitness
 from src.fixkit.genetic.operators import (
@@ -33,9 +34,10 @@ class AbstractAE(GeneticRepair, abc.ABC):
     ):
         self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t)
         self.k = k
+        self.tests: Set[str] = []
         super().__init__(
             initial_candidate=initial_candidate,
-            fitness=self.metric,
+            fitness=None,
             localization=localization,
             population_size=population_size,
             max_generations=max_generations,
@@ -61,8 +63,14 @@ class AbstractAE(GeneticRepair, abc.ABC):
         pass
 
     @abc.abstractmethod
-    def test_strategy(self, candidate: List[GeneticCandidate], model):
+    def test_strategy(self, model) -> Generator[str, None, None]:
         pass
+
+    def localize(self) -> List[WeightedLocation]:
+        locations = super().localize()
+        self.tests = self.localization.failing[:]
+        self.tests += [(test, 0) for test in self.localization.passing]
+        return locations
 
     def candidate_repairs(self, model) -> Generator[List[MutationOperator], None, None]:
         for i in range(1, self.k + 1):
@@ -85,7 +93,7 @@ class AbstractAE(GeneticRepair, abc.ABC):
         for candidate in self.candidate_repairs(model):
             if not (any(self.equivalent(candidate, c) for c in equivalent_classes)):
                 equivalent_classes.add(candidate)
-                # TODO: execute tests
+                # TODO: execute
 
 
 class AE(AbstractAE):
