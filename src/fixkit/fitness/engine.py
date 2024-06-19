@@ -7,10 +7,15 @@ import subprocess
 from pathlib import Path
 from queue import Queue, Empty
 from threading import Thread
-from typing import List, Tuple, Dict, Generator
+from typing import List, Tuple, Dict, Generator, Callable
 
+# noinspection PyPackageRequirements
 import tests4py.api as t4p
+
+# noinspection PyPackageRequirements
 from tests4py.api.report import TestReport, SystemtestTestReport
+
+# noinspection PyPackageRequirements
 from tests4py.tests.utils import TestResult
 
 from fixkit.candidate import GeneticCandidate
@@ -90,6 +95,14 @@ class Engine:
         self.pre_calculated = dict()
         self.transformer = MutationTransformer()
 
+    def evaluate_iteratively(
+        self, candidate: GeneticCandidate, tests: Generator[str, None, None]
+    ) -> Generator[Tuple[str, TestResult], None, None]:
+        """
+        Evaluate the tests of a candidate iteratively and yield the results.
+        """
+        raise StopIteration
+
     def evaluate(self, candidates: Population):
         """
         Evaluate the fitness of a list of candidates.
@@ -144,6 +157,51 @@ class ParallelEngine(Engine):
             thread.join()
 
 
+def _evaluate_tests4py(
+    candidate: GeneticCandidate,
+    fitness: Fitness,
+    transformer: MutationTransformer,
+    cwd: os.PathLike,
+    pre_calculated: Dict[Tuple[MutationOperator], float],
+    raise_on_failure: bool,
+    run_tests: Callable[[], TestReport],
+):
+    """
+    Evaluate the fitness of a candidate using Tests4Py.
+    """
+    key = tuple(candidate.mutations)
+    if key in pre_calculated:
+        candidate.fitness = pre_calculated[key]
+    else:
+        transformer.transform(candidate, cwd)
+        report = t4p.build(cwd)
+        if report.raised:
+            candidate.fitness = 0
+            if raise_on_failure:
+                raise report.raised
+        else:
+            report = run_tests()
+            if report.raised:
+                candidate.fitness = 0
+                if raise_on_failure:
+                    raise report.raised
+            else:
+                passing, failing = set(), set()
+                if isinstance(report, SystemtestTestReport):
+                    results = [
+                        (test, report.results[test][0]) for test in report.results
+                    ]
+                else:
+                    results = report.results
+                for test, result in results:
+                    if result == TestResult.PASSING:
+                        passing.add(test)
+                    elif result == TestResult.FAILING:
+                        failing.add(test)
+                candidate.fitness = fitness.fitness(passing, failing)
+        pre_calculated[key] = candidate.fitness
+
+
 class Tests4PyWorker(Worker):
     """
     Worker class to evaluate the fitness of a candidate using Tests4Py.
@@ -184,37 +242,15 @@ class Tests4PyWorker(Worker):
         :param GeneticCandidate candidate: The candidate to evaluate.
         :param Fitness fitness: The fitness function to use.
         """
-        key = tuple(candidate.mutations)
-        if key in self.pre_calculated:
-            candidate.fitness = self.pre_calculated[key]
-        else:
-            self.transformer.transform(candidate, self.cwd)
-            report = t4p.build(self.cwd)
-            if report.raised:
-                candidate.fitness = 0
-                if self.raise_on_failure:
-                    raise report.raised
-            else:
-                report = self.run_tests()
-                if report.raised:
-                    candidate.fitness = 0
-                    if self.raise_on_failure:
-                        raise report.raised
-                else:
-                    passing, failing = set(), set()
-                    if isinstance(report, SystemtestTestReport):
-                        results = [
-                            (test, report.results[test][0]) for test in report.results
-                        ]
-                    else:
-                        results = report.results
-                    for test, result in results:
-                        if result == TestResult.PASSING:
-                            passing.add(test)
-                        elif result == TestResult.FAILING:
-                            failing.add(test)
-                    candidate.fitness = fitness.fitness(passing, failing)
-            self.pre_calculated[key] = candidate.fitness
+        _evaluate_tests4py(
+            candidate,
+            fitness,
+            self.transformer,
+            self.cwd,
+            self.pre_calculated,
+            self.raise_on_failure,
+            self.run_tests,
+        )
 
 
 class Tests4PyEngine(ParallelEngine):
@@ -311,7 +347,7 @@ class Tests4PySystemTestEngine(Tests4PyEngine):
         ]
 
 
-class IterativeTestsEngine(Engine):
+class IterativeEngine(Engine):
     """
     Engine class to evaluate the fitness of a list of candidates in an iterative fashion.
     """
@@ -325,7 +361,8 @@ class IterativeTestsEngine(Engine):
         Initialize the engine.
         """
         super().__init__(fitness, out=out)
-        self.cwd = self.out / "iterative"
+        self.identifier = "iterative"
+        self.cwd = self.out / self.identifier
 
     def evaluate_iteratively(
         self, candidate: GeneticCandidate, tests: List[str]
@@ -357,7 +394,7 @@ class IterativeTestsEngine(Engine):
                     yield test, TestResult.FAILING
 
 
-class Tests4PyIterativeTestsEngine(IterativeTestsEngine):
+class Tests4PyIterativeEngine(IterativeEngine):
     """
     Engine class to evaluate the fitness of a list of candidates in an iterative fashion using Tests4Py.
     """
@@ -372,7 +409,7 @@ class Tests4PyIterativeTestsEngine(IterativeTestsEngine):
         self.raise_on_failure = raise_on_failure
 
     def evaluate_iteratively(
-        self, candidate: GeneticCandidate, tests: List[str]
+        self, candidate: GeneticCandidate, tests: Generator[str, None, None]
     ) -> Generator[Tuple[str, TestResult], None, None]:
         """
         Evaluate the tests of a candidate iteratively and yield the results.
@@ -385,8 +422,12 @@ class Tests4PyIterativeTestsEngine(IterativeTestsEngine):
             if report.raised:
                 if self.raise_on_failure:
                     raise report.raised
+            if isinstance(report, SystemtestTestReport):
+                results = [(test, report.results[test][0]) for test in report.results]
             else:
-                yield test, report.results[0][1]
+                results = report.results
+            for name, result in results:
+                yield name, result
 
     def run_tests(self, tests: str = None) -> TestReport:
         """
@@ -405,34 +446,18 @@ class Tests4PyIterativeTestsEngine(IterativeTestsEngine):
         Evaluate the fitness of a list of candidates in an iterative fashion using Tests4Py.
         """
         for candidate in candidates:
-            key = tuple(candidate.mutations)
-            if key in self.pre_calculated:
-                candidate.fitness = self.pre_calculated[key]
-            else:
-                self.transformer.transform(candidate, self.cwd)
-                report = t4p.build(self.cwd)
-                if report.raised:
-                    candidate.fitness = 0
-                    if self.raise_on_failure:
-                        raise report.raised
-                else:
-                    report = self.run_tests()
-                    if report.raised:
-                        candidate.fitness = 0
-                        if self.raise_on_failure:
-                            raise report.raised
-                    else:
-                        passing, failing = set(), set()
-                        for test, result in report.results:
-                            if result == TestResult.PASSING:
-                                passing.add(test)
-                            elif result == TestResult.FAILING:
-                                failing.add(test)
-                        candidate.fitness = self.fitness.fitness(passing, failing)
-                self.pre_calculated[key] = candidate.fitness
+            _evaluate_tests4py(
+                candidate,
+                self.fitness,
+                self.transformer,
+                self.cwd,
+                self.pre_calculated,
+                self.raise_on_failure,
+                self.run_tests,
+            )
 
 
-class Tests4PySystemTestIterativeTestsEngine(Tests4PyIterativeTestsEngine):
+class Tests4PySystemTestIterativeEngine(Tests4PyIterativeEngine):
     """
     Engine class to evaluate the fitness of a list of candidates in an iterative fashion using Tests4Py system tests.
     """
@@ -452,18 +477,14 @@ class Tests4PySystemTestIterativeTestsEngine(Tests4PyIterativeTestsEngine):
         Run the tests leveraging Tests4Py.
         :return: The report of the tests.
         """
-        return t4p.test(
-            self.cwd,
-            single_test=tests,
-            relevant_tests=True,
-            xml_output=XML_OUTPUT("iterative"),
-            system_tests=self.tests,
-        )
+        return t4p.systemtest_test(self.cwd, path_or_str=self.tests)
 
 
 __all__ = [
     "ParallelEngine",
     "Tests4PyEngine",
     "Tests4PySystemTestEngine",
-    "IterativeTestsEngine",
+    "IterativeEngine",
+    "Tests4PyIterativeEngine",
+    "Tests4PySystemTestIterativeEngine",
 ]

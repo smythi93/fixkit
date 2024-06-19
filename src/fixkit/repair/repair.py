@@ -14,6 +14,9 @@ from fixkit.fitness.engine import (
     Tests4PyEngine,
     ParallelEngine,
     Tests4PySystemTestEngine,
+    Tests4PyIterativeEngine,
+    Tests4PySystemTestIterativeEngine,
+    IterativeEngine,
 )
 from fixkit.fitness.metric import Fitness
 from fixkit.genetic.crossover import Crossover, OnePointCrossover
@@ -97,6 +100,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         is_system_test: bool = False,
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
+        serial: bool = False,
     ):
         """
         Initialize the genetic repair.
@@ -120,10 +124,24 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         :param bool line_mode: True if the line mode is enabled, False otherwise.
         """
         super().__init__(localization, out)
-        self.initial_candidate = initial_candidate
+        self.initial_candidate: GeneticCandidate = initial_candidate
         self.population: Population = [self.initial_candidate]
         self.choices: List[int] = list(self.initial_candidate.statements.keys())
-        if is_t4p:
+        if serial:
+            if is_t4p:
+                if is_system_test:
+                    if system_tests is None:
+                        raise ValueError("System tests must be provided.")
+                    self.fitness = Tests4PySystemTestIterativeEngine(
+                        fitness=fitness, tests=system_tests, out=self.out
+                    )
+                else:
+                    self.fitness = Tests4PyIterativeEngine(
+                        fitness=fitness, out=self.out
+                    )
+            else:
+                self.fitness = IterativeEngine(fitness=fitness, out=self.out)
+        elif is_t4p:
             if is_system_test:
                 if system_tests is None:
                     raise ValueError("System tests must be provided.")

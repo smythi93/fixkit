@@ -1,23 +1,23 @@
 import os
 import unittest
-from typing import Generator, List
+from typing import Generator
 
-from src.fixkit.candidate import GeneticCandidate
-from src.fixkit.genetic.operators import MutationOperator, Delete
-from src.fixkit.localization.coverage import CoverageLocalization
-from src.fixkit.repair.pyae import AbstractAE
-from src.fixkit.repair.repair import GeneticRepair
+from fixkit.candidate import GeneticCandidate
+from fixkit.genetic.operators import MutationOperator, Delete, InsertBefore
+from fixkit.localization.coverage import CoverageLocalization
+from fixkit.repair.pyae import AbstractAE, AE
+from fixkit.repair.repair import GeneticRepair
 from tests.utils import SUBJECTS, REP
 
 
 class AETest(unittest.TestCase):
     def test_edits(self):
         class TestAE(AbstractAE):
-            @staticmethod
-            def from_source(src: os.PathLike, *args, **kwargs) -> GeneticRepair:
+            @classmethod
+            def _from_source(cls, src: os.PathLike, *args, **kwargs) -> GeneticRepair:
                 pass
 
-            def test_strategy(self, candidate: List[GeneticCandidate], model):
+            def test_strategy(self, model):
                 pass
 
             def equivalent(
@@ -38,9 +38,6 @@ class AETest(unittest.TestCase):
                 tests=["tests.py"],
                 out=REP,
             ),
-            population_size=40,
-            max_generations=10,
-            workers=16,
             out=REP,
             k=3,
         )
@@ -64,3 +61,26 @@ class AETest(unittest.TestCase):
             self.assertIn(e, actual)
         for a in actual:
             self.assertIn(a, expected)
+
+    def test_repair(self):
+        ae = AE.from_source(
+            src=SUBJECTS / "middle",
+            excludes=["tests.py"],
+            localization=CoverageLocalization(
+                SUBJECTS / "middle",
+                cov="middle",
+                metric="Ochiai",
+                tests=["tests.py"],
+                out=REP,
+            ),
+            out=REP,
+            k=1,
+        )
+        patches = ae.repair()
+        self.assertEqual(1, len(patches))
+        patch = patches[0]
+        self.assertEqual(1, len(patch.mutations))
+        mutation = patch.mutations[0]
+        self.assertIsInstance(mutation, InsertBefore)
+        self.assertEqual(5, mutation.identifier)
+        self.assertEqual(9, mutation.selection_identifier)

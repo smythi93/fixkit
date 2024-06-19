@@ -92,7 +92,7 @@ class Fitness(abc.ABC):
         pass
 
 
-class AbsolutFitness(Fitness):
+class AbsoluteFitness(Fitness):
     def fitness(self, passing: Set[str], failing: Set[str]) -> float:
         """
         Evaluate the fitness of a candidate in the directory given by cwd with the provided environment based on a
@@ -139,4 +139,4 @@ class GenProgFitness(Fitness):
         ) / (self.w_pos_t * len(self.passing) + self.w_neg_t * len(self.failing))
 
 
-__all__ = ["Fitness", "GenProgFitness", "AbsolutFitness"]
+__all__ = ["Fitness", "GenProgFitness", "AbsoluteFitness"]
