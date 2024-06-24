@@ -68,62 +68,7 @@ class TestRepair(unittest.TestCase):
         
         random.seed(6)
         patches = repair.repair()
-        self.assertGreater(len(patches), 0)
-        self.assertGreater(len(patches), 0)
-        #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
-        #write_patches(patches, out=REP)
-        #self.assertTrue((REP / "patches" / "1.patch").exists())
-    
-    @unittest.skip
-    def test_repair_middle_pymutrepair(self):
-        repair = PyMutRepair.from_source(
-            src=SUBJECTS / "middle",
-            excludes=["tests.py"],
-            localization=CoverageLocalization(
-                SUBJECTS / "middle",
-                cov="middle",
-                metric="Ochiai",
-                tests=["tests.py"],
-                out=REP,
-            ),
-            population_size=40,
-            max_generations=3,
-            w_mut=0.06,
-            workers=16,
-            out=REP,
-        )
-        
-        random.seed(6)
-        patches = repair.repair()
-        self.assertGreater(len(patches), 0)
-        #self.assertEqual(1, len(patches))
-        #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
-        #write_patches(patches, out=REP)
-        #self.assertTrue((REP / "patches" / "1.patch").exists())
-    
-
-    def test_repair_middle_pycardumen(self):
-        repair = PyCardumen.from_source(
-            src=SUBJECTS / "middle",
-            excludes=["tests.py"],
-            localization=CoverageLocalization(
-                SUBJECTS / "middle",
-                cov="middle",
-                metric="Ochiai",
-                tests=["tests.py"],
-                out=REP,
-            ),
-            population_size=40,
-            max_generations=3,
-            w_mut=0.06,
-            workers=16,
-            out=REP,
-        )
-        
-        random.seed(6)
-        patches = repair.repair()
-        self.assertGreater(len(patches), 0)
-        #self.assertEqual(1, len(patches))
+        self.assertEqual(1, len(patches))
         #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
         #write_patches(patches, out=REP)
         #self.assertTrue((REP / "patches" / "1.patch").exists())
