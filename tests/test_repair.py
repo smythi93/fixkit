@@ -26,7 +26,6 @@ class TestRepair(unittest.TestCase):
         shutil.rmtree(REP, ignore_errors=True)
         shutil.rmtree(SFL, ignore_errors=True)
     
-    @unittest.skip
     def test_repair_middle_pygen(self):
         repair = PyGenProg.from_source(
             src=SUBJECTS / "middle",
@@ -71,11 +70,11 @@ class TestRepair(unittest.TestCase):
         
         random.seed(6)
         patches = repair.repair()
-        #self.assertEqual(1, len(patches))
+        self.assertGreater(len(patches), 0)
         #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
         #write_patches(patches, out=REP)
         #self.assertTrue((REP / "patches" / "1.patch").exists())
-
+    
     @unittest.skip
     def test_repair_middle_pymutrepair(self):
         repair = PyMutRepair.from_source(
@@ -97,6 +96,7 @@ class TestRepair(unittest.TestCase):
         
         random.seed(6)
         patches = repair.repair()
+        self.assertGreater(len(patches), 0)
         #self.assertEqual(1, len(patches))
         #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
         #write_patches(patches, out=REP)
@@ -122,18 +122,8 @@ class TestRepair(unittest.TestCase):
         )
         
         random.seed(6)
-        #tmpl = repair.selecting_template(repair.template_pool ,repair.initial_candidate.statements[1])
-        id = 0
-        statement = repair.initial_candidate.statements[id]
-        file = repair.statement_finder.files[id]
-        print(statement)
-        print(file)
-        tmpls = repair.filter_template_pool("folder", file, statement)
-        print(len(tmpls))
-        for tmpl in tmpls:
-            print(tmpl.path)
-
-        #print(tmpl)
+        patches = repair.repair()
+        self.assertGreater(len(patches), 0)
         #self.assertEqual(1, len(patches))
         #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
         #write_patches(patches, out=REP)

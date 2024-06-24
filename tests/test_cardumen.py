@@ -1,20 +1,15 @@
 import random
 import shutil
 import unittest
-import ast
-from pathlib import Path
+
 from utils import SUBJECTS, REP, SFL
-import os
 
 from pyrep.constants import DEFAULT_WORK_DIR, DEFAULT_EXCLUDES
-from pyrep.genetic.operators import Replace
-from pyrep.genetic.templates import Template, TemplateInstance, Scope_Constructor, Scope
+from pyrep.genetic.templates import Template, TemplateInstance, Scope_Constructor
 from pyrep.localization.coverage import CoverageLocalization
-from pyrep.localization.t4p import Tests4PyLocalization
+
 from pyrep.repair.patch import write_patches
-from pyrep.repair.pygenprog import PyGenProg, SingleMutationPyGenProg
-from pyrep.repair.pykali import PyKali
-from pyrep.repair.pymutrepair import PyMutRepair
+
 from pyrep.repair.pycardumen import PyCardumen
 from pyrep.logger import debug_logger
 from pyrep.localization.normalization import normalize
