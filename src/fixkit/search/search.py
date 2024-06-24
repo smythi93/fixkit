@@ -43,13 +43,13 @@ class EvolutionaryStrategy(SearchStrategy):
 class ExhaustiveStrategy(SearchStrategy):
     def __init__(
         self,
-        mutations: Callable[[], List[Type[MutationOperator]]],
-        suggestions: List[WeightedIdentifier],
-        choices: List[int],
+        operators: List[Type[MutationOperator]], #Auch Callable?
+        suggestions: List[WeightedIdentifier], #Callable oder im constructor garantieren das suggestions vorher calculated werden
+        choices: Optional[List[int]] = None,
         mutate: Optional[GeneticFunction] = None,
     ):
         super().__init__()
-        self.mutations = mutations
+        self.operators = operators
         self.suggestions: List[WeightedIdentifier] = suggestions
         self.choices = choices
         self.mutate: GeneticFunction = mutate or self._mutate
@@ -63,14 +63,16 @@ class ExhaustiveStrategy(SearchStrategy):
         :param GeneticCandidate population: The population to mutate.
         :return GeneticCandidate: The new mutated population.
         """
+
         population = population[:]
         for candidate in population[:]:
             for location in self.suggestions:
                 if location.weight > 0:
-                    for mutation in self.mutations():
+                    for operator in self.operators:
                         new_candidate = candidate.clone()
+                        #location gat kein identifier aber ein .line
                         new_candidate.mutations.append(
-                            mutation(location.identifier, self.choices)
+                            operator(location.line, self.choices)                    
                         )
                         population.append(new_candidate)
         return population
