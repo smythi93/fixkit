@@ -505,6 +505,7 @@ class Copy(MutationOperator):
         return isinstance(other, Copy) and self.identifier == other.identifier
 
 
+
 class ReplaceOperator(MutationOperator, abc.ABC):
     """
     Mutation operator for replacing an operand in a statement.
@@ -563,6 +564,7 @@ class ReplaceComparisonOperator(ReplaceOperator):
         return ast.Compare(statement.left, new_ops, statement.comparators)
 
 
+
 class ReplaceUnaryOperator(ReplaceOperator):
     """
     Mutation operator for replacing a unary operator in a statement.    
@@ -579,7 +581,6 @@ class ReplaceUnaryOperator(ReplaceOperator):
         new_op = random.choice(all_ops)
 
         return ast.UnaryOp(op=new_op(), operand=statement.operand)
-
 
 class ReplaceBooleanOperator(ReplaceOperator):
     """
@@ -627,6 +628,7 @@ class Rename(MutationOperator):
 
     def __eq__(self, other):
         return False
+
 
 class Name_Transformer(ast.NodeTransformer):
     def __init__(self, new_name: str) -> None:
@@ -676,8 +678,7 @@ class Variable_Collector(ast.NodeVisitor):
         if self.statement == node:
             self.found = True
         return super().generic_visit(node)
-    
-    
+ 
 class ModifyIfCondition(MutationOperator, abc.ABC):
 
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
@@ -721,6 +722,7 @@ class InsertReturn(MutationOperator, abc.ABC):
     #hacky way for insert before or after -> not sure if good for our purpose, because kali wants to do every combination. so no randomness.
     #könnte man das einfach weglassen und das statement komplett durch das return statement ersetzen?
     #das wäre doch viel besser/einfacher
+
     def insert(self, tree: ast.AST) -> ast.AST:
         return random.choice([ast.Module(body=[self.get_return_statement(), tree], type_ignores=[]),
                              ast.Module(body=[tree, self.get_return_statement()], type_ignores=[])])
@@ -756,7 +758,7 @@ class InsertReturnTuple(InsertReturn):
     def get_return_statement(self) -> ast.Return:
         #ast.Tuple used correctly?
         return ast.Return(value=ast.Tuple(elts=[], ctx=ast.Load))
-        
+      
 class Mutator(ast.NodeTransformer):
     """
     Mutator class to mutate the abstract syntax tree based on the mutation operators.

@@ -63,8 +63,7 @@ class ExhaustiveStrategy(SearchStrategy):
         :param GeneticCandidate population: The population to mutate.
         :return GeneticCandidate: The new mutated population.
         """
-        #TODO: Wieso [:], da wir ja candidate clonen
-        LOGGER.info("In Exhaustive Search")
+        
         population = population[:]
         for candidate in population[:]:
             for location in self.suggestions:
@@ -72,9 +71,8 @@ class ExhaustiveStrategy(SearchStrategy):
                     for operator in self.operators:
                         new_candidate = candidate.clone()
                         #location gat kein identifier aber ein .line
-                        #wieso ist mutations eine list von mutations operators und nicht dieses statement/mutations ast???
                         new_candidate.mutations.append(
-                            operator(location.line, self.choices)
+                            operator(location.line, self.choices)             
                         )
                         population.append(new_candidate)
         return population
