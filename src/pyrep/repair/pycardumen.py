@@ -5,19 +5,28 @@ The pycardumen module provides the necessary tools to repair a fault using Cardu
 import ast
 import os
 import random
-from typing import List, Optional, Collection
+from typing import List, Optional, Collection, Tuple
+from itertools import product
+from copy import deepcopy
 
 from pyrep.candidate import GeneticCandidate
 from pyrep.fitness.metric import GenProgFitness
 from pyrep.genetic.crossover import OnePointCrossover
 from pyrep.genetic.minimize import DDMutationMinimizer
-from pyrep.genetic.operators import Replace
+from pyrep.genetic.operators import Replace_Cardumen
 from pyrep.genetic.selection import UniversalSelection, Selection
-from pyrep.genetic.templates import Template, ProbabilisticModel, VarNamesCollector
+from pyrep.genetic.templates import (Template, 
+                                     TemplateInstance, 
+                                     TemplateInstanceGenerator, 
+                                     ProbabilisticModel, 
+                                     VarNamesCollector, 
+                                     Scope_Constructor,
+                                     Scope)
 from pyrep.localization import Localization
 from pyrep.localization.location import WeightedLocation
 from pyrep.repair.repair import GeneticRepair
 
+from pyrep.logger import debug_logger, info_logger
 
 class PyCardumen(GeneticRepair):
     """
@@ -61,7 +70,7 @@ class PyCardumen(GeneticRepair):
             population_size=population_size,
             max_generations=max_generations,
             w_mut=w_mut,
-            operators=[Replace],
+            operators=[Replace_Cardumen],
             selection=selection or UniversalSelection(),
             crossover_operator=OnePointCrossover(),
             minimizer=DDMutationMinimizer(),
@@ -73,10 +82,21 @@ class PyCardumen(GeneticRepair):
         )
 
         self.template_pool: List[Template] = list()
-        for statement in self.initial_candidate.statements.values():
-            self.template_pool.append(Template(statement))
+        statements = self.initial_candidate.statements
+        files = self.statement_finder.files
+        for id in statements:
+            self.template_pool.append(Template(statements[id], files[id]))
+        
+        collector = Scope_Constructor()
+        #the trees of all the files of the program to be repaired
+        trees = self.statement_finder.trees
+        for tree in trees.values():
+            collector.search(tree)
+        self.scope_stmt = collector.scope_stmt
 
+        #model
         self.model = ProbabilisticModel(self.initial_candidate.statements)
+        info_logger()
 
     @classmethod
     def from_source(
@@ -160,42 +180,92 @@ class PyCardumen(GeneticRepair):
         candidate = selection.clone()
         for location in self.suggestions:
             if self.should_mutate(location.weight):
+                collector = Scope_Constructor()
+                for tree in candidate.trees.values():
+                    collector.search(tree)
+                scope_stmt = collector.scope_stmt
+                statement = candidate.statements[location.identifier]
+                file = self.statement_finder.files[location.identifier]
+                tmpl_pool = self.filter_template_pool("local", file, statement)
+                tmpl = self.selecting_template(tmpl_pool, statement)
+                tmpl_instances = self.instance_template(tmpl, statement, scope_stmt)
+                tmpl_instance = self.selecting_template_instance(candidate.statements, tmpl_instances)
+
                 candidate.mutations.append(
-                    Replace(location.identifier, self.choices)
+                    Replace_Cardumen(location.identifier, tmpl_instance)
                 )
-        return [candidate]  
+        return [candidate]
     
-    #TODO: die haben location filter local, package, global was guter python äquivalent? local (same file), folder, global
-    #Würde gerne auf File Ebene bleiben und nicht die AST durchsuchen (falls wir auf Class Ebene gehen)
-    def filter_template_pool(self, location: str, file: str, return_type: str = "return_type") -> List[Template]:
+    def filter_template_pool(self, location: str, file: str, statement: ast.AST, code_type_mode: bool = False) -> List[Template]:
+        """
+        Filters the template pool by Location and Target_Code_Type (by default False)
+        Location -> local, folder, global
+        code_type_mode -> True, False
+        """
         pool: List[Template] = self.template_pool
-        pool = [tmpl for tmpl in pool if tmpl.return_type == return_type]
+        if code_type_mode:
+            pool = [tmpl for tmpl in pool if tmpl.target_code_type == type(statement).__name__]
         if location == "local":
-            pool = [tmpl for tmpl in pool if tmpl.file == file]
+            pool = [tmpl for tmpl in pool if tmpl.path == file]
+        elif location == "folder":
+            pool = [tmpl for tmpl in pool if os.path.dirname(tmpl.path) == os.path.dirname(file)]
 
         return pool
 
-    def selecting_template(self, statement: ast.AST) -> Template:
-        print(ast.unparse(statement))
+    def selecting_template(self, template_pool: List[Template], statement: ast.AST) -> Template:
+        """
+        Selects a Template from the Pool by weighted random choice.
+        The weights are (How many Template Var are in the Statement / All Var in Template)
+        f.e.
+        Template 5 Vars and 3 of these Var are in the Statement -> 3/5
+        """
         collector = VarNamesCollector()
         collector.visit(statement)
-        var_statement = collector.vars
+        var_in_statement = collector.vars
         weights = []
-        # doesnt have the template of the statment a 1.0 probability??
-        for template in self.template_pool:
-            var_template = template.original_vars
-            print(var_statement)
-            print(var_template)
-            print(sum(var in var_statement for var in var_template))
-            print(len(var_template))
+        
+        for template in template_pool:
+            collector = VarNamesCollector()
+            collector.visit(template.statement)
+            var_in_template = collector.vars
+            var_in_statement_copy = deepcopy(var_in_statement)
+            count = 0
+            for var in var_in_template:
+                if(var in var_in_statement_copy):
+                    count+=1
+                    var_in_statement_copy.remove(var)
             weights.append(
-                sum(var in var_statement for var in var_template) / len(var_template)
+                count / len(var_in_template)
             )
+        
+        return random.choices(population=template_pool, weights=weights, k=1)[0]
 
-        for tmpl, weight in zip(self.template_pool, weights):
-            print(ast.unparse(tmpl.statement), weight)
+    def instance_template(self, template: Template, statement: ast.AST, scope_stmt: dict[ast.AST, list[Scope]]) -> List[TemplateInstance]:
+        """
+        Creates TemplateInstances from a Template. Collects all Vars in Scope 
+        and creates all possible combinations of the Template.
+        """
+        vars_in_scope = set()
 
-        return random.choices(self.template_pool, weights, k=1)[0]
+        for scope in scope_stmt[statement]:
+            for var in scope.vars:
+                vars_in_scope.add(var)
+        
+        generator = TemplateInstanceGenerator(template)
+        tmpl_instances = generator.construct_all_Combinations(vars_in_scope)
+        
+        return tmpl_instances
 
+    def selecting_template_instance(self, statements: dict[int, ast.AST] ,tmpl_instances: List[TemplateInstance]) -> ast.AST:
+        """
+        Selects a Template Instance by random weighted choice.
+        """
+        probabilities = {}
+        for instance in tmpl_instances:
+            probabilities[instance] = self.model.probabilities[instance.combination.items]
+        
+        lucky_one = random.choices(list(probabilities.keys()), list(probabilities.values()), k=1)[0]
+        
+        return lucky_one
 
 __all__ = ["PyCardumen"]

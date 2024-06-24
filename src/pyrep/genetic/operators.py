@@ -8,6 +8,8 @@ import copy
 import random
 from typing import List, Dict, Optional, Set, Type
 
+from pyrep.genetic.templates import Scope_Constructor, TemplateInstance
+
 
 class MutationOperator(abc.ABC):
     """
@@ -198,7 +200,24 @@ class InsertBoth(Insert):
             and self.inserter == other.inserter
         )
 
+class Replace_Cardumen(MutationOperator):
+    def __init__(self, identifier: int, tmpl_instance: TemplateInstance):
+        super().__init__(identifier, [1])
+        self.tmpl_instance = tmpl_instance
+    
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        mutations[self.identifier] = self.tmpl_instance.tree
 
+    def __eq__(self, other):
+        return (
+            isinstance(other, Replace_Cardumen) 
+            and self.identifier == other.identifier 
+            and self.tmpl_instance == other.tmpl_instance
+        )
+    
+    def __hash__(self):
+        return super().__hash__()
+        
 class Replace(SelectionMutationOperator):
     """
     Mutation operator for replacing a statement with another statement.
@@ -273,8 +292,6 @@ class OtherMutationOperator(SelectionMutationOperator, abc.ABC):
         :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
         :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
         """
-        # Get the statement of the identifier and the statement of the selection identifier with the current mutations
-        # or the statements as default.
         this = mutations.get(self.identifier, statements[self.identifier])
         other = mutations.get(
             self.selection_identifier, statements[self.selection_identifier]
@@ -526,7 +543,6 @@ class ReplaceBinaryOperator(ReplaceOperator):
     """
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
-        #is that correct? How differentiated can a statement be?
         if isinstance(statement, ast.BinOp):
             mutations[self.identfier] = self.mutate_condition(statement)
 
@@ -553,10 +569,6 @@ class ReplaceComparisonOperator(ReplaceOperator):
         new_ops = []
         while(not done):
             new_ops = random.choices(all_ops, k=len(statement.ops))
-            #Problem:   this will always be true -> because in the list are objects even if we iterate over them!
-            #solution1: if we pick the same just ignore it?
-            #solution2: isInstance maybe? and only have classes in all_ops -> must be done for every ReplaceOperator
-            #Problem:   choosing operand pretty similiar possible to move it more up
             if(new_ops != statement.ops):
                 done = True
 
@@ -570,7 +582,6 @@ class ReplaceUnaryOperator(ReplaceOperator):
 
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
-        #is that correct? How differentiated can a statement be?
         if isinstance(statement, ast.UnaryOp):
             mutations[self.identfier] = self.mutate_condition(statement)
 
@@ -587,7 +598,6 @@ class ReplaceBooleanOperator(ReplaceOperator):
     """
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
-        #is that correct? How differentiated can a statement be?
         if isinstance(statement, ast.BoolOp):
             mutations[self.identfier] = self.mutate_condition(statement)
 
@@ -597,92 +607,75 @@ class ReplaceBooleanOperator(ReplaceOperator):
 
         return ast.BoolOp(op=new_op(), values = statement.values)
 
-
 class Rename(MutationOperator):
     """
     Mutation operator for renaming an identifier in a statement.
     """
+    def __init__(self, identifier: int, program: ast.AST, choices: List[int] | None = None):
+        self.program = program
+        super().__init__(identifier, choices)
 
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
-        #Aufwendig die Variablen jedes mal zu suchen, könnte man auch nur einmal machen in init des repairs
         statement = mutations.get(self.identifier, statements[self.identifier])
+        constructor = Scope_Constructor()
+        constructor.search(self.program)
+        scope_stmt = constructor.scope_stmt
+        scopes = scope_stmt[statement]
         all_idfs = set()
-        #bei uns ist das programm ja in mehrere ast gesplittet -> wie mit scopes? am besten alle statements zu einem ast machen
-        #erstmal nur scopes für einen ast
-        for id in statements:
-            collector = Variable_Collector(id)
-            collector.visit(statements[id])
-            print(collector.names)
-            for name in collector.names:
-                all_idfs.add(name)
+        for scope in scopes:
+            for var in scope.vars:
+                all_idfs.add(var)
         new_name = random.choice(tuple(all_idfs))
-        #TODO: Was ist wenn das statement mehr als einen ast.Name enthält -> dann kriegen alle den neuen namen, das wollen wir ja nicht 
+
         mutations[self.identifier] = self._mutate_name(statement, new_name)
     
     def _mutate_name(self, statement, new_name):
-        return Name_Transformer(new_name).visit(statement)
+        return NameTransformer(new_name).visit(statement)
 
     def __hash__(self):
         return super().__hash__()
 
     def __eq__(self, other):
-        return False
+        return False 
 
-class Name_Transformer(ast.NodeTransformer):
+class NameTransformer(ast.NodeTransformer):
+    '''
+    Chooses a random name stmt in the stmt and changes it using the Reservoir Sampling Algorithm.
+    '''
     def __init__(self, new_name: str) -> None:
         super().__init__()
         self.new_name = new_name
-    
-    def visit_Name(self, node: ast.Name):
-        return ast.Name(id = self.new_name, ctx = node.ctx)
-    
-class Variable_Collector(ast.NodeVisitor):
-    """
-    Collects the variable which are in the same scope as the statment
-    """
-    def __init__(self, statement: ast.stmt):
-        self.names = set()
-        self.found = False
-        self.statement = statement
-        self.scope_stack = [set()]
+        self.selected_node = None
+        self.name_count = 0
 
     def visit_Name(self, node: ast.Name):
-        self.scope_stack[-1].add(node.id)
+        self.name_count += 1
+        if random.randint(1, self.name_count) == 1:
+            self.selected_node = node
+
         self.generic_visit(node)
+        return node
 
-    def visit_arg(self, node: ast.arg):
-        if not node.arg == "self":
-            self.scope_stack[-1].add(node.arg)
-        self.generic_visit(node)
+    def transform(self, node: ast.AST):
+        self.visit(node)
+        
+        return self._transform_target(node)
+    
+    def _transform_target(self, node: ast.AST):
+        if isinstance(node, ast.Name) and node == self.selected_node:
+            return ast.Name(id=self.new_name, ctx=node.ctx)
+        
+        for field, value in ast.iter_fields(node):
+            if isinstance(value, list):
+                for i, item in enumerate(value):
+                    if isinstance(item, ast.AST):
+                        value[i] = self._transform_target(item)
+            elif isinstance(value, ast.AST):
+                setattr(node, field, self._transform_target(value))
+        
+        return node
 
-    def visit_FunctionDef(self, node: ast.FunctionDef):
-        self.visit_Helper(node)
-    
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
-        self.visit_Helper(node)
-    
-    def visit_ClassDef(self, node: ast.ClassDef):
-        self.visit_Helper(node)
 
-    def visit_Helper(self, node):
-        #opening new scope
-        self.scope_stack.append(set())
-        self.generic_visit(node)
-        if self.found:
-            for scope in self.scope_stack:
-                for name in scope:
-                    self.names.add(name)
-            #Abbruch wäre noch besser
-            self.found = False
-        #closing scope
-        self.scope_stack.pop()
-
-    def generic_visit(self, node: ast.AST):
-        if self.statement == node:
-            self.found = True
-        return super().generic_visit(node)
-    
-    
 class ModifyIfCondition(MutationOperator, abc.ABC):
 
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
@@ -723,9 +716,6 @@ class InsertReturn(MutationOperator, abc.ABC):
             mutations.get(self.identifier, statements[self.identifier]),
         )
 
-    #hacky way for insert before or after -> not sure if good for our purpose, because kali wants to do every combination. so no randomness.
-    #könnte man das einfach weglassen und das statement komplett durch das return statement ersetzen?
-    #das wäre doch viel besser/einfacher
     def insert(self, tree: ast.AST) -> ast.AST:
         return random.choice([ast.Module(body=[self.get_return_statement(), tree], type_ignores=[]),
                              ast.Module(body=[tree, self.get_return_statement()], type_ignores=[])])

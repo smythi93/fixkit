@@ -17,8 +17,8 @@ class Bar:
         e = 5
         f = e + d
 """
-        code_1 = """c = d + 5"""
-        tree_1 = ast.parse(code_1)
+        self.code_1 = """c = d + 5"""
+        tree_1 = ast.parse(self.code_1)
         code_2 = """b = c + 1"""
         tree_2 = ast.parse(code_2)
         code_3 = """a = b + c"""
@@ -29,17 +29,16 @@ class Bar:
             3 : tree_3,
         }
 
-    @unittest.skip
-    def test_creating_template(self):
-        tree = ast.parse(self.code)
-        tmpl = Template(tree)
-        new_vars = ["var_" + str(x) for x in range(0,len(tmpl.nodes))]
-        new_tree = tmpl.apply_Changes(new_vars)
-        print("Old:")
-        print(ast.unparse(tree))
-        print("New:")
-        print(ast.unparse(new_tree))
     
+    def test_creating_template(self):
+        tree = ast.parse(self.code_1)
+        tmpl = Template(tree, "path")
+        
+        tmpl_instances, _ = tmpl.construct_all_Combinations(["1", "2", "3", "4"])
+        for instance in tmpl_instances:
+            print(ast.unparse(instance))
+    
+    @unittest.skip
     def test_probabilistic_model(self):
         model = ProbabilisticModel(self.statements)
         print(model.probabilities)

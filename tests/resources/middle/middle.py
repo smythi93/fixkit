@@ -1,3 +1,7 @@
+#def middle(x, y, z):
+#    x = y +z
+#    return x
+
 def middle(x, y, z):
     if y < z:
         if x < y:

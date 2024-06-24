@@ -8,6 +8,8 @@ import random
 from pathlib import Path
 from typing import Collection, List, Type, Optional, Any
 
+from copy import deepcopy
+
 from pyrep.candidate import Candidate, GeneticCandidate
 from pyrep.constants import DEFAULT_WORK_DIR
 from pyrep.fitness.engine import Tests4PyEngine, Engine, Tests4PySystemTestEngine
@@ -330,8 +332,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         Mutate the population to create new candidates by giving each candidate a chance to mutate.
         """
-        population = population[:]
-        for candidate in population[:]:
+        pop = deepcopy(population)
+        for candidate in pop:
             population.extend(self.mutate(candidate))
         return population
 

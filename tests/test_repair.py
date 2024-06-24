@@ -1,8 +1,10 @@
 import random
 import shutil
 import unittest
+import ast
 from pathlib import Path
 from utils import SUBJECTS, REP, SFL
+import os
 
 import tests4py.api as t4p
 
@@ -120,8 +122,18 @@ class TestRepair(unittest.TestCase):
         )
         
         random.seed(6)
-        tmpl = repair.selecting_template(repair.initial_candidate.statements[1])
-        print(tmpl)
+        #tmpl = repair.selecting_template(repair.template_pool ,repair.initial_candidate.statements[1])
+        id = 0
+        statement = repair.initial_candidate.statements[id]
+        file = repair.statement_finder.files[id]
+        print(statement)
+        print(file)
+        tmpls = repair.filter_template_pool("folder", file, statement)
+        print(len(tmpls))
+        for tmpl in tmpls:
+            print(tmpl.path)
+
+        #print(tmpl)
         #self.assertEqual(1, len(patches))
         #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
         #write_patches(patches, out=REP)

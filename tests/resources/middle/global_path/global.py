@@ -1,1 +1,1 @@
-test_location = 100
+global_x = 100
