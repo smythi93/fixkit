@@ -49,7 +49,6 @@ class TestRepair(unittest.TestCase):
         write_patches(patches, out=REP)
         self.assertTrue((REP / "patches" / "1.patch").exists())
 
-    @unittest.skip
     def test_repair_middle_pykali(self):
         repair = PyKali.from_source(
             src=SUBJECTS / "middle",
@@ -69,6 +68,7 @@ class TestRepair(unittest.TestCase):
         
         random.seed(6)
         patches = repair.repair()
+        self.assertGreater(len(patches), 0)
         self.assertGreater(len(patches), 0)
         #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
         #write_patches(patches, out=REP)
