@@ -14,6 +14,7 @@ from fixkit.repair.patch import write_patches
 from fixkit.repair.pygenprog import PyGenProg, SingleMutationPyGenProg
 from fixkit.repair.pykali import PyKali
 from fixkit.logger import debug_logger
+
 from utils import SUBJECTS, REP, SFL
 
 

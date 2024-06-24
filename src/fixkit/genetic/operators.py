@@ -566,7 +566,6 @@ class Rename(MutationOperator):
     def __eq__(self, other):
         return False
 
-
 class ModifyIfCondition(MutationOperator, abc.ABC):
 
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
@@ -640,7 +639,7 @@ class InsertReturnTuple(InsertReturn):
     def get_return_statement(self) -> ast.Return:
         #ast.Tuple used correctly?
         return ast.Return(value=ast.Tuple(elts=[], ctx=ast.Load))
-        
+       
 class Mutator(ast.NodeTransformer):
     """
     Mutator class to mutate the abstract syntax tree based on the mutation operators.
