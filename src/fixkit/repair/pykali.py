@@ -14,7 +14,7 @@ from fixkit.genetic.minimize import DDMutationMinimizer
 from fixkit.genetic.operators import (Delete, ModifyIfToFalse, ModifyIfToTrue, 
                                      InsertReturn0, InsertReturnNone, InsertReturnString, 
                                      InsertReturnTuple, InsertReturnList)
-from pyrep.localization import Localization
+from fixkit.localization import Localization
 from fixkit.localization.location import WeightedLocation
 from fixkit.repair.repair import GeneticRepair
 from fixkit.genetic.selection import UniversalSelection, Selection
