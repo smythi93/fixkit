@@ -4,9 +4,9 @@ import random
 import unittest
 from pathlib import Path
 
-from pyrep.candidate import GeneticCandidate
-from pyrep.genetic.crossover import OnePointCrossover
-from pyrep.genetic.operators import (
+from fixkit.candidate import GeneticCandidate
+from fixkit.genetic.crossover import OnePointCrossover
+from fixkit.genetic.operators import (
     Delete,
     InsertBefore,
     Replace,
@@ -19,7 +19,7 @@ from pyrep.genetic.operators import (
     InsertBoth,
     MoveBoth,
 )
-from pyrep.stmt import StatementFinder
+from fixkit.stmt import StatementFinder
 
 
 class TestGenetic(unittest.TestCase):

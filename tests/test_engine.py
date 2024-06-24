@@ -1,12 +1,13 @@
+import os.path
 import shutil
 import unittest
 from pathlib import Path
 
 import tests4py.api as t4p
 
-from pyrep.candidate import GeneticCandidate
-from pyrep.fitness.engine import Engine, Tests4PyEngine, Tests4PySystemTestEngine
-from pyrep.fitness.metric import GenProgFitness
+from fixkit.candidate import GeneticCandidate
+from fixkit.fitness.engine import Engine, Tests4PyEngine, Tests4PySystemTestEngine
+from fixkit.fitness.metric import GenProgFitness
 from utils import SUBJECTS, REP, SFL
 
 
@@ -83,13 +84,13 @@ class TestTest4PyEngine(unittest.TestCase):
     def run_system_test(self, workers: int):
         fitness = GenProgFitness(
             {
-                "tmp/middle_2/tests4py_systemtest_diversity/passing_test_diversity_1",
-                "tmp/middle_2/tests4py_systemtest_diversity/passing_test_diversity_2",
-                "tmp/middle_2/tests4py_systemtest_diversity/passing_test_diversity_3",
+                os.path.join(SUBJECTS, "tests", "555"),
+                os.path.join(SUBJECTS, "tests", "123"),
+                os.path.join(SUBJECTS, "tests", "534"),
+                os.path.join(SUBJECTS, "tests", "321"),
+                os.path.join(SUBJECTS, "tests", "335"),
             },
-            {
-                "tmp/middle_2/tests4py_systemtest_diversity/failing_test_diversity_1",
-            },
+            {os.path.join(SUBJECTS, "tests", "213")},
         )
         candidates = list()
         for i in range(2 * workers):
@@ -98,12 +99,7 @@ class TestTest4PyEngine(unittest.TestCase):
             self.assertAlmostEqual(0, candidate.fitness, delta=0.000001)
         engine = Tests4PySystemTestEngine(
             fitness,
-            [
-                "tmp/middle_2/tests4py_systemtest_diversity/passing_test_diversity_1",
-                "tmp/middle_2/tests4py_systemtest_diversity/passing_test_diversity_2",
-                "tmp/middle_2/tests4py_systemtest_diversity/passing_test_diversity_3",
-                "tmp/middle_2/tests4py_systemtest_diversity/failing_test_diversity_1",
-            ],
+            os.path.join(SUBJECTS, "tests"),
             workers,
             out=REP,
             raise_on_failure=True,
@@ -118,8 +114,8 @@ class TestTest4PyEngine(unittest.TestCase):
     def test_engine_5(self):
         self.run_test(5)
 
-    def tests_system_test_1(self):
+    def test_system_engine_1(self):
         self.run_system_test(1)
 
-    def tests_system_test_5(self):
+    def test_system_engine_5(self):
         self.run_system_test(5)
