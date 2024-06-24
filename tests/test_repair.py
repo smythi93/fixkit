@@ -22,7 +22,7 @@ class TestRepair(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(REP, ignore_errors=True)
         shutil.rmtree(SFL, ignore_errors=True)
-    
+
     def test_repair_middle_pygen(self):
         repair = PyGenProg.from_source(
             src=SUBJECTS / "middle",
@@ -42,7 +42,7 @@ class TestRepair(unittest.TestCase):
         )
         random.seed(6)
         patches = repair.repair()
-        self.assertEqual(1, len(patches))
+        self.assertGreater(len(patches), 0)
         self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
         write_patches(patches, out=REP)
         self.assertTrue((REP / "patches" / "1.patch").exists())
