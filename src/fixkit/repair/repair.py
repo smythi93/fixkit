@@ -14,9 +14,9 @@ from fixkit.fitness.engine import (
     Tests4PyEngine,
     ParallelEngine,
     Tests4PySystemTestEngine,
-    Tests4PyIterativeEngine,
-    Tests4PySystemTestIterativeEngine,
-    IterativeEngine,
+    Tests4PySequentialEngine,
+    Tests4PySystemTestSequentialEngine,
+    SequentialEngine,
 )
 from fixkit.fitness.metric import Fitness
 from fixkit.genetic.crossover import Crossover, OnePointCrossover
@@ -132,15 +132,15 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
                 if is_system_test:
                     if system_tests is None:
                         raise ValueError("System tests must be provided.")
-                    self.fitness = Tests4PySystemTestIterativeEngine(
+                    self.fitness = Tests4PySystemTestSequentialEngine(
                         fitness=fitness, tests=system_tests, out=self.out
                     )
                 else:
-                    self.fitness = Tests4PyIterativeEngine(
+                    self.fitness = Tests4PySequentialEngine(
                         fitness=fitness, out=self.out
                     )
             else:
-                self.fitness = IterativeEngine(fitness=fitness, out=self.out)
+                self.fitness = SequentialEngine(fitness=fitness, out=self.out)
         elif is_t4p:
             if is_system_test:
                 if system_tests is None:

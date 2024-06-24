@@ -95,7 +95,7 @@ class Engine:
         self.pre_calculated = dict()
         self.transformer = MutationTransformer()
 
-    def evaluate_iteratively(
+    def evaluate_sequentially(
         self, candidate: GeneticCandidate, tests: Generator[str, None, None]
     ) -> Generator[Tuple[str, TestResult], None, None]:
         """
@@ -347,7 +347,7 @@ class Tests4PySystemTestEngine(Tests4PyEngine):
         ]
 
 
-class IterativeEngine(Engine):
+class SequentialEngine(Engine):
     """
     Engine class to evaluate the fitness of a list of candidates in an iterative fashion.
     """
@@ -361,10 +361,10 @@ class IterativeEngine(Engine):
         Initialize the engine.
         """
         super().__init__(fitness, out=out)
-        self.identifier = "iterative"
+        self.identifier = "sequential"
         self.cwd = self.out / self.identifier
 
-    def evaluate_iteratively(
+    def evaluate_sequentially(
         self, candidate: GeneticCandidate, tests: List[str]
     ) -> Generator[Tuple[str, TestResult], None, None]:
         """
@@ -394,7 +394,7 @@ class IterativeEngine(Engine):
                     yield test, TestResult.FAILING
 
 
-class Tests4PyIterativeEngine(IterativeEngine):
+class Tests4PySequentialEngine(SequentialEngine):
     """
     Engine class to evaluate the fitness of a list of candidates in an iterative fashion using Tests4Py.
     """
@@ -408,7 +408,7 @@ class Tests4PyIterativeEngine(IterativeEngine):
         super().__init__(fitness, out)
         self.raise_on_failure = raise_on_failure
 
-    def evaluate_iteratively(
+    def evaluate_sequentially(
         self, candidate: GeneticCandidate, tests: Generator[str, None, None]
     ) -> Generator[Tuple[str, TestResult], None, None]:
         """
@@ -457,7 +457,7 @@ class Tests4PyIterativeEngine(IterativeEngine):
             )
 
 
-class Tests4PySystemTestIterativeEngine(Tests4PyIterativeEngine):
+class Tests4PySystemTestSequentialEngine(Tests4PySequentialEngine):
     """
     Engine class to evaluate the fitness of a list of candidates in an iterative fashion using Tests4Py system tests.
     """
@@ -484,7 +484,7 @@ __all__ = [
     "ParallelEngine",
     "Tests4PyEngine",
     "Tests4PySystemTestEngine",
-    "IterativeEngine",
-    "Tests4PyIterativeEngine",
-    "Tests4PySystemTestIterativeEngine",
+    "SequentialEngine",
+    "Tests4PySequentialEngine",
+    "Tests4PySystemTestSequentialEngine",
 ]

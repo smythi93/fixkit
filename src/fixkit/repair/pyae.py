@@ -1,10 +1,12 @@
 import abc
+import ast
 import os
-from typing import List, Optional, Generator, Set, Tuple
+from typing import List, Optional, Generator, Set, Tuple, Dict
 
 # noinspection PyPackageRequirements
 from tests4py.tests.utils import TestResult
 
+from fixkit.analysis.dataflow import DataflowAnalysis
 from fixkit.candidate import GeneticCandidate, Candidate
 from fixkit.fitness.metric import AbsoluteFitness
 from fixkit.genetic.operators import (
@@ -12,6 +14,7 @@ from fixkit.genetic.operators import (
     InsertBefore,
     InsertAfter,
     MutationOperator,
+    Insert,
 )
 from fixkit.genetic.types import Population
 from fixkit.localization.localization import Localization
@@ -123,7 +126,7 @@ class AbstractAE(GeneticRepair, abc.ABC):
             if not (any(self.equivalent(candidate, c) for c in equivalent_classes)):
                 equivalent_classes.add(candidate)
                 passing = True
-                for test, result in self.fitness.evaluate_iteratively(
+                for test, result in self.fitness.evaluate_sequentially(
                     candidate, self.test_strategy(model)
                 ):
                     model.add((candidate, test, result))
@@ -133,10 +136,33 @@ class AbstractAE(GeneticRepair, abc.ABC):
                 if passing:
                     self.population = [candidate]
                     return
-        self.population = [self.initial_candidate]
+        self.population = []
 
 
 class AE(AbstractAE):
+    def __init__(
+        self,
+        initial_candidate: Candidate,
+        localization: Localization,
+        k: int = 1,
+        out: os.PathLike = None,
+        is_t4p: bool = False,
+        is_system_test: bool = False,
+        system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
+        line_mode: bool = False,
+    ):
+        super().__init__(
+            initial_candidate=initial_candidate,
+            localization=localization,
+            k=k,
+            out=out,
+            is_t4p=is_t4p,
+            is_system_test=is_system_test,
+            system_tests=system_tests,
+            line_mode=line_mode,
+        )
+        self.dataflow_analysis = DataflowAnalysis()
+
     def repair_strategy(self, model) -> Generator[MutationOperator, None, None]:
         reversed_suggestions = [location.identifier for location in self.suggestions]
         for identifier in self.choices:
@@ -160,6 +186,85 @@ class AE(AbstractAE):
 
     def equivalent(self, candidate_1: GeneticCandidate, candidate_2: GeneticCandidate):
         return candidate_1 == candidate_2
+
+    @staticmethod
+    def syntactic_equivalent(
+        files: Set[str],
+        candidate_1: GeneticCandidate,
+        candidate_2: GeneticCandidate,
+        asts_1: Dict[str, ast.AST],
+        asts_2: Dict[str, ast.AST],
+    ):
+        for file in files:
+            if (
+                file not in asts_1
+                or file not in asts_2
+                or ast.dump(asts_1[file]) != ast.dump(asts_2[file])
+            ):
+                return False
+        return True
+
+    @staticmethod
+    def dead_code_equivalent(
+        files: Set[str],
+        candidate_1: GeneticCandidate,
+        candidate_2: GeneticCandidate,
+        asts_1: Dict[str, ast.AST],
+        asts_2: Dict[str, ast.AST],
+    ):
+        insertions_1: Set[Insert] = set()
+        insertions_2: Set[Insert] = set()
+        deletion_1: Set[Delete] = set()
+        deletion_2: Set[Delete] = set()
+        for operator in candidate_1.mutations:
+            if isinstance(operator, Insert):
+                insertions_1.add(operator.identifier)
+            elif isinstance(operator, Delete):
+                deletion_1.add(operator)
+        for operator in candidate_2.mutations:
+            if isinstance(operator, Insert):
+                insertions_2.add(operator.identifier)
+            elif isinstance(operator, Delete):
+                deletion_2.add(operator)
+        if deletion_1 != deletion_2:
+            return False
+        insertions_1 = insertions_1.difference(insertions_2)
+        insertions_2 = insertions_2.difference(insertions_1)
+        if insertions_1 == insertions_2:
+            return True
+
+        for file in files:
+            if file not in asts_1 or file not in asts_2:
+                return False
+
+        return False
+
+    @staticmethod
+    def order_equivalent(
+        files: Set[str],
+        candidate_1: GeneticCandidate,
+        candidate_2: GeneticCandidate,
+        asts_1: Dict[str, ast.AST],
+        asts_2: Dict[str, ast.AST],
+    ):
+        insertions_1: Set[Insert] = set()
+        insertions_2: Set[Insert] = set()
+        for operator in candidate_1.mutations:
+            if isinstance(operator, Insert):
+                insertions_1.add(operator.identifier)
+        for operator in candidate_2.mutations:
+            if isinstance(operator, Insert):
+                insertions_2.add(operator.identifier)
+        insertions_1 = insertions_1.difference(insertions_2)
+        insertions_2 = insertions_2.difference(insertions_1)
+        if insertions_1 == insertions_2:
+            return True
+
+        for file in files:
+            if file not in asts_1 or file not in asts_2:
+                return False
+
+        return False
 
     @classmethod
     def _from_source(
