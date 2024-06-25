@@ -131,7 +131,8 @@ class AbstractAE(GeneticRepair, abc.ABC):
                 for test, result in self.fitness.evaluate_sequentially(
                     candidate, self.test_strategy(model)
                 ):
-                    model.add((candidate, test, result))
+                    if test != "build":
+                        model.add((candidate, test, result))
                     if result != TestResult.PASSING:
                         passing = False
                         break
