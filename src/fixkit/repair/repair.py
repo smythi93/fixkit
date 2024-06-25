@@ -10,7 +10,14 @@ from typing import Collection, List, Type, Optional, Any
 
 from fixkit.candidate import Candidate, GeneticCandidate
 from fixkit.constants import DEFAULT_WORK_DIR
-from fixkit.fitness.engine import Tests4PyEngine, Engine, Tests4PySystemTestEngine
+from fixkit.fitness.engine import (
+    Tests4PyEngine,
+    ParallelEngine,
+    Tests4PySystemTestEngine,
+    Tests4PySequentialEngine,
+    Tests4PySystemTestSequentialEngine,
+    SequentialEngine,
+)
 from fixkit.fitness.metric import Fitness
 from fixkit.genetic.crossover import Crossover, OnePointCrossover
 from fixkit.genetic.minimize import MutationMinimizer, DefaultMutationMinimizer
@@ -93,6 +100,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         is_system_test: bool = False,
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
+        serial: bool = False,
     ):
         """
         Initialize the genetic repair.
@@ -116,10 +124,24 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         :param bool line_mode: True if the line mode is enabled, False otherwise.
         """
         super().__init__(localization, out)
-        self.initial_candidate = initial_candidate
+        self.initial_candidate: GeneticCandidate = initial_candidate
         self.population: Population = [self.initial_candidate]
         self.choices: List[int] = list(self.initial_candidate.statements.keys())
-        if is_t4p:
+        if serial:
+            if is_t4p:
+                if is_system_test:
+                    if system_tests is None:
+                        raise ValueError("System tests must be provided.")
+                    self.fitness = Tests4PySystemTestSequentialEngine(
+                        fitness=fitness, tests=system_tests, out=self.out
+                    )
+                else:
+                    self.fitness = Tests4PySequentialEngine(
+                        fitness=fitness, out=self.out
+                    )
+            else:
+                self.fitness = SequentialEngine(fitness=fitness, out=self.out)
+        elif is_t4p:
             if is_system_test:
                 if system_tests is None:
                     raise ValueError("System tests must be provided.")
@@ -131,7 +153,9 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
                     fitness=fitness, workers=workers, out=self.out
                 )
         else:
-            self.fitness = Engine(fitness=fitness, workers=workers, out=self.out)
+            self.fitness = ParallelEngine(
+                fitness=fitness, workers=workers, out=self.out
+            )
         self.population_size = population_size
         self.max_generations = max_generations
         self.w_mut = w_mut
@@ -145,7 +169,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         self.minimizer = minimizer or DefaultMutationMinimizer()
         self.minimizer.fitness = self.fitness
         self.line_mode = line_mode
-        self.strategy = self.get_search_strategy()
+        self.strategy = None
 
     def get_search_strategy(self) -> SearchStrategy:
         return EvolutionaryStrategy(
@@ -186,11 +210,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         return NotImplemented
 
-    def repair(self) -> Population:
-        """
-        Repair the fault using genetic programming.
-        :return Population: The list of candidates that repair (or perform best) the fault.
-        """
+    def prepare_repair(self) -> Population:
         # Localize the faults.
         LOGGER.info("Localizing the faulty code locations.")
         suggestions = self.localize()
@@ -200,7 +220,9 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         # Evaluate the fitness for the initial candidate to reduce overhead.
         LOGGER.info("Evaluating the fitness for the initial candidate.")
         self.fitness.evaluate(self.population)
+        self.strategy = self.get_search_strategy()
 
+    def repair_loop(self):
         if not self.abort():
             # Fill the population and evaluate the fitness.
             LOGGER.info(
@@ -223,6 +245,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         else:
             LOGGER.info("The fault is already repaired.")
 
+    def finalize_repair(self):
         # Minimize the population and return the best candidates.
         fitness = max(c.fitness for c in self.population)
         LOGGER.info("The best candidate has a fitness of %.2f.", fitness)
@@ -231,6 +254,18 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         LOGGER.info("Minimize the best candidates.")
         self.population = self.minimizer.minimize(self.population)
         LOGGER.info("Found %d possible repairs.", len(self.population))
+
+    def repair(self) -> Population:
+        """
+        Repair the fault using genetic programming.
+        :return Population: The list of candidates that repair (or perform best) the fault.
+        """
+        self.prepare_repair()
+
+        self.repair_loop()
+
+        self.finalize_repair()
+
         return self.population
 
     def abort(self) -> bool:
