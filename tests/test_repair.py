@@ -18,7 +18,6 @@ from fixkit.repair.pymutrepair import PyMutRepair
 from fixkit.repair.pycardumen import PyCardumen
 
 
-
 class TestRepair(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(REP, ignore_errors=True)
@@ -64,13 +63,13 @@ class TestRepair(unittest.TestCase):
             workers=16,
             out=REP,
         )
-        
+
         random.seed(6)
         patches = repair.repair()
         self.assertGreater(len(patches), 0)
-        #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
-        #write_patches(patches, out=REP)
-        #self.assertTrue((REP / "patches" / "1.patch").exists())
+        # self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
+        # write_patches(patches, out=REP)
+        # self.assertTrue((REP / "patches" / "1.patch").exists())
 
     def test_repair_middle_pymutrepair(self):
         repair = PyMutRepair.from_source(
@@ -89,13 +88,13 @@ class TestRepair(unittest.TestCase):
             workers=16,
             out=REP,
         )
-        
+
         random.seed(6)
         patches = repair.repair()
         self.assertGreater(len(patches), 0)
-        #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
-        #write_patches(patches, out=REP)
-        #self.assertTrue((REP / "patches" / "1.patch").exists())
+        # self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
+        # write_patches(patches, out=REP)
+        # self.assertTrue((REP / "patches" / "1.patch").exists())
 
     def test_repair_middle_pymutrepair(self):
         repair = PyCardumen.from_source(
@@ -118,14 +117,14 @@ class TestRepair(unittest.TestCase):
         random.seed(6)
         patches = repair.repair()
         self.assertGreater(len(patches), 0)
-        #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
-        #write_patches(patches, out=REP)
-        #self.assertTrue((REP / "patches" / "1.patch").exists())
-    
+        # self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
+        # write_patches(patches, out=REP)
+        # self.assertTrue((REP / "patches" / "1.patch").exists())
+
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree("tmp", ignore_errors=True)
-    
+
     @unittest.skip
     def test_repair_t4p(self):
         report = t4p.checkout(t4p.middle_2, Path("tmp"))
@@ -156,6 +155,7 @@ class TestRepair(unittest.TestCase):
         self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
         write_patches(patches, out=REP)
         self.assertTrue((REP / "patches" / "1.patch").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
