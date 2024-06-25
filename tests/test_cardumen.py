@@ -4,15 +4,15 @@ import unittest
 
 from utils import SUBJECTS, REP, SFL
 
-from pyrep.constants import DEFAULT_WORK_DIR, DEFAULT_EXCLUDES
-from pyrep.genetic.templates import Template, TemplateInstance, Scope_Constructor
-from pyrep.localization.coverage import CoverageLocalization
+from fixkit.constants import DEFAULT_WORK_DIR, DEFAULT_EXCLUDES
+from fixkit.genetic.templates import Template, TemplateInstance, Scope_Constructor
+from fixkit.localization.coverage import CoverageLocalization
 
-from pyrep.repair.patch import write_patches
+from fixkit.repair.patch import write_patches
 
-from pyrep.repair.pycardumen import PyCardumen
-from pyrep.logger import debug_logger
-from pyrep.localization.normalization import normalize
+from fixkit.repair.pycardumen import PyCardumen
+from fixkit.logger import debug_logger
+from fixkit.localization.normalization import normalize
 
 
 
