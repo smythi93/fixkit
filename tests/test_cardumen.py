@@ -15,8 +15,8 @@ class TestCardumen(unittest.TestCase):
         shutil.rmtree(SFL, ignore_errors=True)
 
     def setUp(self):
-        self.cardumen = PyCardumen.from_source(
-            src=SUBJECTS / "middle",
+        self.cardumen: PyCardumen = PyCardumen.from_source(
+            src=SUBJECTS / "middle_cardumen",
             excludes=["tests.py"],
             localization=CoverageLocalization(
                 SUBJECTS / "middle",
@@ -31,10 +31,9 @@ class TestCardumen(unittest.TestCase):
             workers=16,
             out=REP,
         )
-        self.cardumen: PyCardumen
 
-        if type(self.cardumen.initial_candidate.statements[15]).__name__ == "Assign":
-            self.assign_stmt = self.cardumen.initial_candidate.statements[16]
+        if type(self.cardumen.initial_candidate.statements[17]).__name__ == "Assign":
+            self.assign_stmt = self.cardumen.initial_candidate.statements[17]
 
         if type(self.cardumen.initial_candidate.statements[9]).__name__ == "Return":
             self.return_stmt = self.cardumen.initial_candidate.statements[9]
@@ -48,46 +47,47 @@ class TestCardumen(unittest.TestCase):
     def test_cardumen_filter_template_pool(self):
         # testing local vs global vs folder
         file = "middle.py"
-        tmpls_local = self.cardumen.filter_template_pool(
+        templates_local = self.cardumen.filter_template_pool(
             "local", file, self.assign_stmt
         )
-        tmpls_global = self.cardumen.filter_template_pool(
+        templates_global = self.cardumen.filter_template_pool(
             "global", file, self.assign_stmt
         )
-        tmpls_folder = self.cardumen.filter_template_pool(
+        templates_folder = self.cardumen.filter_template_pool(
             "folder", file, self.assign_stmt
         )
-        self.assertTrue(len(tmpls_global) >= len(tmpls_folder) >= len(tmpls_local))
+        self.assertTrue(
+            len(templates_global) >= len(templates_folder) >= len(templates_local)
+        )
         # testing code type
         file = "global_path/global.py"
-        tmpls_same_type = self.cardumen.filter_template_pool(
+        templates_same_type = self.cardumen.filter_template_pool(
             "local", file, self.return_stmt, code_type_mode=True
         )
-        self.assertTrue(tmpl.target_code_type == "Return" for tmpl in tmpls_same_type)
+        self.assertTrue(
+            tmpl.target_code_type == "Return" for tmpl in templates_same_type
+        )
 
     def test_cardumen_selecting_template(self):
         stmt = self.return_stmt
-        tmpl = self.cardumen.selecting_template(self.cardumen.template_pool, stmt)
-        # Schwierig eine Assertion zu machen, da Randomness
-        # Das stmt und die tmpl sollten in etwa die gleichen Var Namen haben aber halt auch nicht immer
-        self.assertTrue(isinstance(tmpl, Template))
+        template = self.cardumen.selecting_template(self.cardumen.template_pool, stmt)
+        self.assertTrue(isinstance(template, Template))
 
     def test_cardumen_instance_template(self):
         stmt = self.assign_stmt
-        tmpl = self.cardumen.selecting_template(self.cardumen.template_pool, stmt)
-        tmpl_instances = self.cardumen.instance_template(tmpl, stmt, self.stmt_scope)
-        for tmpl_instance in tmpl_instances:
+        template = self.cardumen.selecting_template(self.cardumen.template_pool, stmt)
+        template_instances = self.cardumen.instance_template(
+            template, stmt, self.stmt_scope
+        )
+        for tmpl_instance in template_instances:
             self.assertTrue(isinstance(tmpl_instance, TemplateInstance))
         # good assertion needed len over instances??
 
     def test_cardumen_selecting_template_instance(self):
-        statements = self.cardumen.initial_candidate.statements
         stmt = self.cardumen.initial_candidate.statements[3]
         tmpl = self.cardumen.selecting_template(self.cardumen.template_pool, stmt)
         tmpl_instances = self.cardumen.instance_template(tmpl, stmt, self.stmt_scope)
-        tmpl_instance = self.cardumen.selecting_template_instance(
-            statements, tmpl_instances
-        )
+        tmpl_instance = self.cardumen.selecting_template_instance(tmpl_instances)
         self.assertTrue(isinstance(tmpl_instance, TemplateInstance))
 
     def test_repair_middle_pycardumen(self):
@@ -95,14 +95,9 @@ class TestCardumen(unittest.TestCase):
         patches = self.cardumen.repair()
 
         self.assertGreater(len(patches), 0)
-        # self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
         write_patches(patches, out=REP)
         self.assertTrue((REP / "patches" / "1.patch").exists())
 
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree("tmp", ignore_errors=True)
-
-
-if __name__ == "__main__":
-    unittest.main()
