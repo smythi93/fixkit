@@ -81,14 +81,18 @@ class TestCardumen(unittest.TestCase):
         )
         for tmpl_instance in template_instances:
             self.assertTrue(isinstance(tmpl_instance, TemplateInstance))
-        # good assertion needed len over instances??
 
     def test_cardumen_selecting_template_instance(self):
         stmt = self.cardumen.initial_candidate.statements[3]
-        tmpl = self.cardumen.selecting_template(self.cardumen.template_pool, stmt)
-        tmpl_instances = self.cardumen.instance_template(tmpl, stmt, self.stmt_scope)
-        tmpl_instance = self.cardumen.selecting_template_instance(tmpl_instances)
-        self.assertTrue(isinstance(tmpl_instance, TemplateInstance))
+        random.seed(0)
+        template = self.cardumen.selecting_template(self.cardumen.template_pool, stmt)
+        template_instances = self.cardumen.instance_template(
+            template, stmt, self.stmt_scope
+        )
+        template_instance = self.cardumen.selecting_template_instance(
+            template_instances
+        )
+        self.assertTrue(isinstance(template_instance, TemplateInstance))
 
     def test_repair_middle_pycardumen(self):
         random.seed(6)
