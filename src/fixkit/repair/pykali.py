@@ -11,7 +11,7 @@ from fixkit.candidate import Candidate, GeneticCandidate
 from fixkit.fitness.metric import GenProgFitness
 from fixkit.genetic.crossover import OnePointCrossover
 from fixkit.genetic.minimize import DDMutationMinimizer
-from fixkit.genetic.operators import (Delete, ModifyIfToFalse, ModifyIfToTrue, 
+from fixkit.genetic.operators import (Delete, ModifyIfToFalse, ModifyIfToTrue,
                                      InsertReturn0, InsertReturnNone, InsertReturnString, 
                                      InsertReturnTuple, InsertReturnList)
 from fixkit.localization import Localization
@@ -148,6 +148,7 @@ class PyKali(GeneticRepair):
             operators=self.operator,
             suggestions=self.localize() # or self.suggestions
         )
+
 
 
 __all__ = ["PyKali"]
