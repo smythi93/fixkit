@@ -5,7 +5,7 @@ from typing import Generator
 from fixkit.candidate import GeneticCandidate
 from fixkit.genetic.operators import MutationOperator, Delete, InsertBefore
 from fixkit.localization.coverage import CoverageLocalization
-from fixkit.repair.pyae import AbstractAE, AE
+from fixkit.repair.pyae import AbstractAE, PyAE
 from fixkit.repair.repair import GeneticRepair
 from tests.utils import SUBJECTS, REP
 
@@ -63,7 +63,7 @@ class AETest(unittest.TestCase):
             self.assertIn(a, expected)
 
     def test_repair(self):
-        ae = AE.from_source(
+        ae = PyAE.from_source(
             src=SUBJECTS / "middle",
             excludes=["tests.py"],
             localization=CoverageLocalization(

@@ -139,7 +139,7 @@ class AbstractAE(GeneticRepair, abc.ABC):
         self.population = []
 
 
-class AE(AbstractAE):
+class PyAE(AbstractAE):
     def __init__(
         self,
         initial_candidate: Candidate,
@@ -187,6 +187,7 @@ class AE(AbstractAE):
     def equivalent(self, candidate_1: GeneticCandidate, candidate_2: GeneticCandidate):
         return candidate_1 == candidate_2
 
+    # noinspection PyUnusedLocal
     @staticmethod
     def syntactic_equivalent(
         files: Set[str],
@@ -279,7 +280,7 @@ class AE(AbstractAE):
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
     ) -> GeneticRepair:
-        return AE(
+        return PyAE(
             initial_candidate=AbstractAE.get_initial_candidate(
                 src, excludes, line_mode
             ),
