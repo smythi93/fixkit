@@ -4,7 +4,6 @@ pykali is not really used for repairs. It is used to find under-specified bugs a
 """
 
 import os
-import random
 from typing import List, Optional
 
 from fixkit.candidate import Candidate, GeneticCandidate
@@ -21,10 +20,10 @@ from fixkit.genetic.operators import (
     InsertReturnTuple,
     InsertReturnList,
 )
+from fixkit.genetic.selection import UniversalSelection, Selection
 from fixkit.localization import Localization
 from fixkit.localization.location import WeightedLocation
 from fixkit.repair.repair import GeneticRepair
-from fixkit.genetic.selection import UniversalSelection, Selection
 from fixkit.search.search import SearchStrategy, ExhaustiveStrategy
 
 
@@ -51,7 +50,6 @@ class PyKali(GeneticRepair):
         Initialize the Kali repair.
         :param GeneticCandidate initial_candidate: The initial candidate to start the repair.
         :param Localization localization: The localization to use for the repair.
-        :param int population_size: The size of the population.
         :param int max_generations: The maximum number of generations.
         :param float w_mut: The mutation rate, i.e., the probability of a mutation.
         :param Selection selection: The selection operator to use for the repair.
@@ -123,7 +121,6 @@ class PyKali(GeneticRepair):
         :param os.PathLike src: The source directory of the project.
         :param Optional[List[str]] excludes: The set of files to exclude from the statement search.
         :param Localization localization: The localization to use for the repair.
-        :param int population_size: The size of the population.
         :param int max_generations: The maximum number of generations.
         :param float w_mut: The mutation rate, i.e., the probability of a mutation.
         :param Selection selection: The selection operator to use for the repair.
@@ -164,5 +161,7 @@ class PyKali(GeneticRepair):
             operators=self.operator, suggestions=self.localize()  # or self.suggestions
         )
 
+    def get_search_strategy(self) -> SearchStrategy:
+        return ExhaustiveStrategy(operators=self.operator, suggestions=self.suggestions)
 
 __all__ = ["PyKali"]

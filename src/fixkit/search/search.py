@@ -1,5 +1,5 @@
 import abc
-from typing import List, Callable, Optional, Type
+from typing import List, Optional, Type
 
 from fixkit.candidate import GeneticCandidate
 from fixkit.genetic.operators import MutationOperator
@@ -43,8 +43,8 @@ class EvolutionaryStrategy(SearchStrategy):
 class ExhaustiveStrategy(SearchStrategy):
     def __init__(
         self,
-        operators: List[Type[MutationOperator]], #Auch Callable?
-        suggestions: List[WeightedIdentifier], #Callable oder im constructor garantieren das suggestions vorher calculated werden
+        operators: List[Type[MutationOperator]],
+        suggestions: List[WeightedIdentifier],
         choices: Optional[List[int]] = None,
         mutate: Optional[GeneticFunction] = None,
     ):
@@ -63,16 +63,15 @@ class ExhaustiveStrategy(SearchStrategy):
         :param GeneticCandidate population: The population to mutate.
         :return GeneticCandidate: The new mutated population.
         """
-        
+
         population = population[:]
         for candidate in population[:]:
             for location in self.suggestions:
                 if location.weight > 0:
                     for operator in self.operators:
                         new_candidate = candidate.clone()
-                        #location gat kein identifier aber ein .line
                         new_candidate.mutations.append(
-                            operator(location.line, self.choices)             
+                            operator(location.identifier, self.choices)
                         )
                         population.append(new_candidate)
         return population

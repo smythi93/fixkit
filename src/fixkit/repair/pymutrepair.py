@@ -30,7 +30,6 @@ class PyMutRepair(GeneticRepair):
         self,
         src: os.PathLike,
         localization: Localization,
-        population_size: int,
         max_generations: int,
         w_mut: float,
         selection: Selection = None,
@@ -46,7 +45,6 @@ class PyMutRepair(GeneticRepair):
         Initialize the GenProg repair.
         :param os.PathLike src: The source directory of the project.
         :param Localization localization: The localization to use for the repair.
-        :param int population_size: The size of the population.
         :param int max_generations: The maximum number of generations.
         :param float w_mut: The mutation rate, i.e., the probability of a mutation.
         :param Selection selection: The selection operator to use for the repair.
@@ -56,12 +54,11 @@ class PyMutRepair(GeneticRepair):
         :param float w_neg_t: The weight for the negative test cases.
         """
         self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t)
-        # Exhaustive Search just like kali
         super().__init__(
             src=src,
             fitness=self.metric,
             localization=localization,
-            population_size=population_size,
+            population_size=1,
             max_generations=max_generations,
             w_mut=w_mut,
             operators=[
@@ -99,7 +96,6 @@ class PyMutRepair(GeneticRepair):
         src: os.PathLike,
         excludes: Optional[List[str]],
         localization: Localization,
-        population_size: int,
         max_generations: int,
         w_mut: float,
         selection: Selection = None,
@@ -115,7 +111,6 @@ class PyMutRepair(GeneticRepair):
         :param os.PathLike src: The source directory of the project.
         :param Optional[List[str]] excludes: The set of files to exclude from the statement search.
         :param Localization localization: The localization to use for the repair.
-        :param int population_size: The size of the population.
         :param int max_generations: The maximum number of generations.
         :param float w_mut: The mutation rate, i.e., the probability of a mutation.
         :param Selection selection: The selection operator to use for the repair.
@@ -128,7 +123,6 @@ class PyMutRepair(GeneticRepair):
         return PyMutRepair(
             src=src,
             localization=localization,
-            population_size=population_size,
             max_generations=max_generations,
             w_mut=w_mut,
             selection=selection,
@@ -154,9 +148,7 @@ class PyMutRepair(GeneticRepair):
         return suggestions
 
     def get_search_strategy(self) -> SearchStrategy:
-        return ExhaustiveStrategy(
-            operators=self.operator, suggestions=self.localize()  # or self.suggestions
-        )
+        return ExhaustiveStrategy(operators=self.operator, suggestions=self.suggestions)
 
 
 __all__ = ["PyMutRepair"]

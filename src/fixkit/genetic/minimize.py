@@ -6,7 +6,7 @@ import abc
 from typing import List, Optional
 
 from fixkit.candidate import Candidate, GeneticCandidate
-from fixkit.fitness.engine import Engine
+from fixkit.fitness.engine import ParallelEngine
 
 
 class Minimizer(abc.ABC):
@@ -38,10 +38,10 @@ class MutationMinimizer(Minimizer, abc.ABC):
     Abstract class for mutation minimization operators.
     """
 
-    def __init__(self, fitness: Optional[Engine] = None):
+    def __init__(self, fitness: Optional[ParallelEngine] = None):
         """
         Initialize the minimizer with a fitness engine.
-        :param Optional[Engine] fitness: The fitness engine to use for evaluating the fitness of a candidate.
+        :param Optional[ParallelEngine] fitness: The fitness engine to use for evaluating the fitness of a candidate.
         If not set during initialization, it needs to be set afterward.
         """
         self.fitness = fitness
