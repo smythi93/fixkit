@@ -169,7 +169,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         self.minimizer = minimizer or DefaultMutationMinimizer()
         self.minimizer.fitness = self.fitness
         self.line_mode = line_mode
-        self.strategy = self.get_search_strategy()
+        self.strategy = None
 
     def get_search_strategy(self) -> SearchStrategy:
         return EvolutionaryStrategy(
@@ -220,6 +220,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         # Evaluate the fitness for the initial candidate to reduce overhead.
         LOGGER.info("Evaluating the fitness for the initial candidate.")
         self.fitness.evaluate(self.population)
+        self.strategy = self.get_search_strategy()
 
     def repair_loop(self):
         if not self.abort():
