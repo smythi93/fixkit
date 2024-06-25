@@ -63,7 +63,7 @@ class ExhaustiveStrategy(SearchStrategy):
         :param GeneticCandidate population: The population to mutate.
         :return GeneticCandidate: The new mutated population.
         """
-
+        
         population = population[:]
         for candidate in population[:]:
             for location in self.suggestions:
@@ -72,7 +72,7 @@ class ExhaustiveStrategy(SearchStrategy):
                         new_candidate = candidate.clone()
                         #location gat kein identifier aber ein .line
                         new_candidate.mutations.append(
-                            operator(location.line, self.choices)                    
+                            operator(location.line, self.choices)             
                         )
                         population.append(new_candidate)
         return population

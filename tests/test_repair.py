@@ -14,6 +14,7 @@ from fixkit.repair.patch import write_patches
 from fixkit.repair.pygenprog import PyGenProg, SingleMutationPyGenProg
 from fixkit.repair.pykali import PyKali
 from fixkit.logger import debug_logger
+from fixkit.repair.pymutrepair import PyMutRepair
 
 from utils import SUBJECTS, REP, SFL
 
@@ -71,6 +72,31 @@ class TestRepair(unittest.TestCase):
         #write_patches(patches, out=REP)
         #self.assertTrue((REP / "patches" / "1.patch").exists())
 
+    def test_repair_middle_pymutrepair(self):
+        repair = PyMutRepair.from_source(
+            src=SUBJECTS / "middle",
+            excludes=["tests.py"],
+            localization=CoverageLocalization(
+                SUBJECTS / "middle",
+                cov="middle",
+                metric="Ochiai",
+                tests=["tests.py"],
+                out=REP,
+            ),
+            population_size=40,
+            max_generations=3,
+            w_mut=0.06,
+            workers=16,
+            out=REP,
+        )
+        
+        random.seed(6)
+        patches = repair.repair()
+        self.assertGreater(len(patches), 0)
+        #self.assertAlmostEqual(1, patches[0].fitness, delta=0.000001)
+        #write_patches(patches, out=REP)
+        #self.assertTrue((REP / "patches" / "1.patch").exists())
+    
     @classmethod
     def tearDownClass(cls):
         shutil.rmtree("tmp", ignore_errors=True)
