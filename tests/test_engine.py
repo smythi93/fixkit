@@ -1,4 +1,4 @@
-import os.path
+import os
 import shutil
 import unittest
 from pathlib import Path

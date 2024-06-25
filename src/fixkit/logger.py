@@ -19,3 +19,6 @@ def debug_logger():
     Set the logger to debug level.
     """
     LOGGER.setLevel(logging.DEBUG)
+
+def info_logger():
+    LOGGER.setLevel(logging.INFO)
