@@ -30,7 +30,7 @@ class AETest(unittest.TestCase):
                     yield Delete(identifier=i)
 
         ae = TestAE(
-            GeneticCandidate(SUBJECTS / "middle"),
+            src=SUBJECTS / "middle",
             localization=CoverageLocalization(
                 SUBJECTS / "middle",
                 cov="middle",
@@ -40,6 +40,7 @@ class AETest(unittest.TestCase):
             ),
             out=REP,
             k=3,
+            excludes=["tests.py"],
         )
 
         expected = [[Delete(identifier=i)] for i in range(3)]
