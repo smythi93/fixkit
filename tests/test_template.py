@@ -1,5 +1,5 @@
-import unittest
 import ast
+import unittest
 
 from fixkit.genetic.templates import Template, ProbabilisticModel
 
