@@ -1,7 +1,8 @@
 import unittest
 import ast
 
-from pyrep.genetic.templates import Template, ProbabilisticModel
+from fixkit.genetic.templates import Template, ProbabilisticModel
+
 
 class TestTemplate(unittest.TestCase):
     def setUp(self) -> None:
@@ -24,25 +25,23 @@ class Bar:
         code_3 = """a = b + c"""
         tree_3 = ast.parse(code_3)
         self.statements = {
-            1 : tree_1,
-            2 : tree_2,
-            3 : tree_3,
+            1: tree_1,
+            2: tree_2,
+            3: tree_3,
         }
 
-    
     def test_creating_template(self):
         tree = ast.parse(self.code_1)
         tmpl = Template(tree, "path")
-        
+
         tmpl_instances, _ = tmpl.construct_all_Combinations(["1", "2", "3", "4"])
         for instance in tmpl_instances:
             print(ast.unparse(instance))
-    
+
     @unittest.skip
     def test_probabilistic_model(self):
         model = ProbabilisticModel(self.statements)
         print(model.probabilities)
-
 
 
 if __name__ == "__main__":
