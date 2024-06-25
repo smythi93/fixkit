@@ -24,7 +24,7 @@ class PyGenProg(GeneticRepair):
 
     def __init__(
         self,
-        initial_candidate: Candidate,
+        src: os.PathLike,
         localization: Localization,
         population_size: int,
         max_generations: int,
@@ -54,7 +54,7 @@ class PyGenProg(GeneticRepair):
         """
         self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t)
         super().__init__(
-            initial_candidate=initial_candidate,
+            src=src,
             fitness=self.metric,
             localization=localization,
             population_size=population_size,
@@ -120,7 +120,7 @@ class PyGenProg(GeneticRepair):
         :return PyGenProg: The GenProg repair created from the source.
         """
         return PyGenProg(
-            initial_candidate=PyGenProg.get_initial_candidate(src, excludes, line_mode),
+            src=src,
             localization=localization,
             population_size=population_size,
             max_generations=max_generations,
