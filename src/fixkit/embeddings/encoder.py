@@ -3,7 +3,7 @@ from typing import Callable, Tuple, List, Optional
 import numpy as np
 import scipy
 
-from pyrep.logger import LOGGER
+from fixkit.logger import LOGGER
 
 
 class Layer:

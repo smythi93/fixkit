@@ -2,7 +2,7 @@ import ast
 import unittest
 from typing import List
 
-from pyrep.embeddings.code2vec.granularity import (
+from fixkit.embeddings.word2vec.granularity import (
     CorpusBuilder,
     GranularityBuilder,
     Granularity,

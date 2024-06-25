@@ -87,7 +87,7 @@ class GranularityBuilder:
     def build(self) -> List[List[str]]:
         terminals = list()
         if self.src.is_file():
-            terminals += self.build_from_file(".")
+            terminals += self.build_from_file("")
         elif self.src.is_dir():
             for directory, _, files in os.walk(self.src):
                 if not any(fnmatch.fnmatch(directory, e) for e in self.excludes):

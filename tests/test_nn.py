@@ -3,12 +3,13 @@ import unittest
 
 import numpy as np
 
-from pyrep.embeddings.encoder import NeuralNetwork, Layer, DeepRepairAutoEncoder
+from fixkit.embeddings.encoder import NeuralNetwork, Layer, DeepRepairAutoEncoder
 
 
 class TestNN(unittest.TestCase):
     def test_nn(self):
         random.seed(0)
+        np.random.seed(0)
         x = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
         y = np.array([[0], [1], [1], [0]])
 
@@ -24,6 +25,7 @@ class TestNN(unittest.TestCase):
 
     def test_deep_repair_encoder(self):
         random.seed(0)
+        np.random.seed(0)
         encoder = DeepRepairAutoEncoder(2)
         x = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
         encoder.train(x, epochs=50)
@@ -31,8 +33,10 @@ class TestNN(unittest.TestCase):
             for data_2 in x:
                 array = np.concatenate([data_1, data_2])
                 loss = encoder.loss(array, encoder.predict(array))
-                self.assertGreaterEqual(10, loss)
+                self.assertGreaterEqual(4, loss)
         encoding = encoder.recursive_encode(
             [[0, 0], [0, 1], [1, 0], [1, 1], [1, 0], [1, 1]]
         )
-        print(encoding)
+        self.assertEqual(2, len(encoding))
+        self.assertAlmostEqual(0.99, encoding[0], delta=0.01)
+        self.assertAlmostEqual(0.99, encoding[1], delta=0.01)
