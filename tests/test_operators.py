@@ -1,11 +1,11 @@
 import unittest
-from pyrep.genetic.operators import Delete, Copy, Rename, Variable_Collector
-from pyrep.genetic.operators import InsertReturn0, InsertReturnList, InsertReturnString, InsertReturnNone
-from pyrep.genetic.operators import InsertAfter, InsertBefore, InsertBoth, Replace
+from fixkit.genetic.operators import Delete, Copy, Rename, Variable_Collector
+from fixkit.genetic.operators import InsertReturn0, InsertReturnList, InsertReturnString, InsertReturnNone
+from fixkit.genetic.operators import InsertAfter, InsertBefore, InsertBoth, Replace
 import ast
-from pyrep.stmt import StatementFinder
+from fixkit.stmt import StatementFinder
 from utils import SUBJECTS, REP
-from pyrep.candidate import GeneticCandidate
+from fixkit.candidate import GeneticCandidate
 
 class TestInsertReturn(ast.NodeVisitor):
     def __init__(self) -> None:
