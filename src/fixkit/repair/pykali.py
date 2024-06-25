@@ -157,7 +157,11 @@ class PyKali(GeneticRepair):
         return suggestions
 
     def get_search_strategy(self) -> SearchStrategy:
-        return ExhaustiveStrategy(operators=self.operator, suggestions=self.suggestions)
+        return ExhaustiveStrategy(
+            operators=self.operator, suggestions=self.localize()  # or self.suggestions
+        )
 
+    def get_search_strategy(self) -> SearchStrategy:
+        return ExhaustiveStrategy(operators=self.operator, suggestions=self.suggestions)
 
 __all__ = ["PyKali"]

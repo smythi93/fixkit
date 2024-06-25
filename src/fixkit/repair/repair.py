@@ -5,6 +5,7 @@ The repair module provides the necessary tools to repair a fault.
 import abc
 import os
 import random
+from copy import deepcopy
 from pathlib import Path
 from typing import Collection, List, Type, Optional, Any
 
@@ -83,7 +84,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
 
     def __init__(
         self,
-        initial_candidate: GeneticCandidate,
+        src: os.PathLike,
         fitness: Fitness,
         localization: Localization,
         population_size: int,
@@ -99,12 +100,13 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         is_t4p: bool = False,
         is_system_test: bool = False,
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
+        excludes: Optional[str] = None,
         line_mode: bool = False,
         serial: bool = False,
     ):
         """
         Initialize the genetic repair.
-        :param GeneticCandidate initial_candidate: The initial candidate to start the repair.
+        :param os.PathLike src: The source directory of the project.
         :param Fitness fitness: The fitness to use for the repair.
         :param Localization localization: The localization to use for the repair.
         :param int population_size: The size of the population.
@@ -124,7 +126,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         :param bool line_mode: True if the line mode is enabled, False otherwise.
         """
         super().__init__(localization, out)
-        self.initial_candidate: GeneticCandidate = initial_candidate
+        self.statement_finder: StatementFinder = None
+        self.initial_candidate = self.get_initial_candidate(src, excludes, line_mode)
         self.population: Population = [self.initial_candidate]
         self.choices: List[int] = list(self.initial_candidate.statements.keys())
         if serial:
@@ -179,9 +182,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
             mutate=self.mutate_population,
         )
 
-    @staticmethod
     def get_initial_candidate(
-        src: os.PathLike, excludes: Optional[str], line_mode: bool = False
+        self, src: os.PathLike, excludes: Optional[str], line_mode: bool = False
     ) -> GeneticCandidate:
         """
         Get the initial candidate from the source.
@@ -191,12 +193,12 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         :return GeneticCandidate: The initial candidate.
         """
         LOGGER.info("Searching for statements in the source.")
-        statement_finder = StatementFinder(
+        self.statement_finder = StatementFinder(
             src=Path(src), excludes=excludes, line_mode=line_mode
         )
-        statement_finder.search_source()
+        self.statement_finder.search_source()
         LOGGER.info("Building the initial candidate.")
-        return GeneticCandidate.from_candidate(statement_finder.build_candidate())
+        return GeneticCandidate.from_candidate(self.statement_finder.build_candidate())
 
     @staticmethod
     @abc.abstractmethod
@@ -364,8 +366,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         Mutate the population to create new candidates by giving each candidate a chance to mutate.
         """
-        population = population[:]
-        for candidate in population[:]:
+        pop = deepcopy(population)
+        for candidate in pop:
             population.extend(self.mutate(candidate))
         return population
 

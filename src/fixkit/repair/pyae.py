@@ -27,7 +27,7 @@ from fixkit.repair.repair import GeneticRepair
 class AbstractAE(GeneticRepair, abc.ABC):
     def __init__(
         self,
-        initial_candidate: Candidate,
+        src: os.PathLike,
         localization: Localization,
         k: int = 1,
         out: os.PathLike = None,
@@ -35,12 +35,13 @@ class AbstractAE(GeneticRepair, abc.ABC):
         is_system_test: bool = False,
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
+        excludes: Optional[List[str]] = None,
     ):
         self.metric = AbsoluteFitness(set(), set())
         self.k = k
         self.tests: Set[str] = []
         super().__init__(
-            initial_candidate=initial_candidate,
+            src=src,
             fitness=None,
             localization=localization,
             population_size=1,
@@ -57,6 +58,7 @@ class AbstractAE(GeneticRepair, abc.ABC):
             line_mode=line_mode,
             w_mut=1,
             serial=True,
+            excludes=excludes,
         )
 
     @classmethod
@@ -142,7 +144,7 @@ class AbstractAE(GeneticRepair, abc.ABC):
 class PyAE(AbstractAE):
     def __init__(
         self,
-        initial_candidate: Candidate,
+        src: os.PathLike,
         localization: Localization,
         k: int = 1,
         out: os.PathLike = None,
@@ -150,9 +152,10 @@ class PyAE(AbstractAE):
         is_system_test: bool = False,
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
+        excludes: Optional[List[str]] = None,
     ):
         super().__init__(
-            initial_candidate=initial_candidate,
+            src=src,
             localization=localization,
             k=k,
             out=out,
@@ -160,6 +163,7 @@ class PyAE(AbstractAE):
             is_system_test=is_system_test,
             system_tests=system_tests,
             line_mode=line_mode,
+            excludes=excludes,
         )
         self.dataflow_analysis = DataflowAnalysis()
 
@@ -281,9 +285,7 @@ class PyAE(AbstractAE):
         line_mode: bool = False,
     ) -> GeneticRepair:
         return PyAE(
-            initial_candidate=AbstractAE.get_initial_candidate(
-                src, excludes, line_mode
-            ),
+            src=src,
             localization=localization,
             k=k,
             out=out,
@@ -291,4 +293,5 @@ class PyAE(AbstractAE):
             is_system_test=is_system_test,
             system_tests=system_tests,
             line_mode=line_mode,
+            excludes=excludes,
         )

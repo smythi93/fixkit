@@ -5,7 +5,6 @@ The pymutrepair module provides the necessary tools to repair a fault using MutR
 import os
 from typing import List, Optional
 
-from fixkit.candidate import Candidate, GeneticCandidate
 from fixkit.fitness.metric import GenProgFitness
 from fixkit.genetic.crossover import OnePointCrossover
 from fixkit.genetic.minimize import DDMutationMinimizer
@@ -29,7 +28,7 @@ class PyMutRepair(GeneticRepair):
 
     def __init__(
         self,
-        initial_candidate: Candidate,
+        src: os.PathLike,
         localization: Localization,
         max_generations: int,
         w_mut: float,
@@ -39,11 +38,12 @@ class PyMutRepair(GeneticRepair):
         w_pos_t: float = 1,
         w_neg_t: float = 10,
         is_t4p: bool = False,
+        excludes: Optional[List[str]] = None,
         line_mode: bool = False,
     ):
         """
         Initialize the GenProg repair.
-        :param GeneticCandidate initial_candidate: The initial candidate to start the repair.
+        :param os.PathLike src: The source directory of the project.
         :param Localization localization: The localization to use for the repair.
         :param int max_generations: The maximum number of generations.
         :param float w_mut: The mutation rate, i.e., the probability of a mutation.
@@ -55,7 +55,7 @@ class PyMutRepair(GeneticRepair):
         """
         self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t)
         super().__init__(
-            initial_candidate=initial_candidate,
+            src=src,
             fitness=self.metric,
             localization=localization,
             population_size=1,
@@ -73,6 +73,7 @@ class PyMutRepair(GeneticRepair):
             workers=workers,
             out=out,
             is_t4p=is_t4p,
+            excludes=excludes,
             line_mode=line_mode,
         )
 
@@ -120,9 +121,7 @@ class PyMutRepair(GeneticRepair):
         :return PyGenProg: The GenProg repair created from the source.
         """
         return PyMutRepair(
-            initial_candidate=PyMutRepair.get_initial_candidate(
-                src, excludes, line_mode
-            ),
+            src=src,
             localization=localization,
             max_generations=max_generations,
             w_mut=w_mut,
@@ -132,6 +131,7 @@ class PyMutRepair(GeneticRepair):
             w_pos_t=w_pos_t,
             w_neg_t=w_neg_t,
             is_t4p=is_t4p,
+            excludes=excludes,
             line_mode=line_mode,
         )
 

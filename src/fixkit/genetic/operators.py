@@ -8,6 +8,8 @@ import copy
 import random
 from typing import List, Dict, Optional, Set, Type
 
+from fixkit.genetic.templates import TemplateInstance
+
 
 class MutationOperator(abc.ABC):
     """
@@ -877,6 +879,25 @@ class Mutator(ast.NodeTransformer):
         return set(self.identifier_map.keys())
 
 
+class ReplaceCardumen(MutationOperator):
+    def __init__(self, identifier: int, tmpl_instance: TemplateInstance):
+        super().__init__(identifier, [1])
+        self.tmpl_instance = tmpl_instance
+
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        mutations[self.identifier] = self.tmpl_instance.tree
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReplaceCardumen)
+            and self.identifier == other.identifier
+            and self.tmpl_instance == other.tmpl_instance
+        )
+
+    def __hash__(self):
+        return super().__hash__()
+
+
 __all__ = [
     "MutationOperator",
     "Delete",
@@ -889,5 +910,19 @@ __all__ = [
     "MoveBoth",
     "Swap",
     "Copy",
+    "ReplaceBinaryOperator",
+    "ReplaceComparisonOperator",
+    "ReplaceUnaryOperator",
+    "ReplaceBooleanOperator",
+    "Rename",
+    "ModifyIfToFalse",
+    "ModifyIfToTrue",
+    "InsertReturn0",
+    "InsertReturnNone",
+    "InsertReturnString",
+    "InsertReturnList",
+    "InsertReturnTuple",
+    "ReplaceCardumen",
+    "VariableCollector",
     "Mutator",
 ]
