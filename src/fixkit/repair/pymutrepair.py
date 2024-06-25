@@ -3,18 +3,22 @@ The pymutrepair module provides the necessary tools to repair a fault using MutR
 """
 
 import os
-import random
 from typing import List, Optional
 
 from fixkit.candidate import Candidate, GeneticCandidate
 from fixkit.fitness.metric import GenProgFitness
 from fixkit.genetic.crossover import OnePointCrossover
 from fixkit.genetic.minimize import DDMutationMinimizer
-from fixkit.genetic.operators import ReplaceBinaryOperator, ReplaceBooleanOperator, ReplaceComparisonOperator, ReplaceUnaryOperator
+from fixkit.genetic.operators import (
+    ReplaceBinaryOperator,
+    ReplaceBooleanOperator,
+    ReplaceComparisonOperator,
+    ReplaceUnaryOperator,
+)
+from fixkit.genetic.selection import UniversalSelection, Selection
 from fixkit.localization import Localization
 from fixkit.localization.location import WeightedLocation
 from fixkit.repair.repair import GeneticRepair
-from fixkit.genetic.selection import UniversalSelection, Selection
 from fixkit.search.search import ExhaustiveStrategy, SearchStrategy
 
 
@@ -27,7 +31,6 @@ class PyMutRepair(GeneticRepair):
         self,
         initial_candidate: Candidate,
         localization: Localization,
-        population_size: int,
         max_generations: int,
         w_mut: float,
         selection: Selection = None,
@@ -42,7 +45,6 @@ class PyMutRepair(GeneticRepair):
         Initialize the GenProg repair.
         :param GeneticCandidate initial_candidate: The initial candidate to start the repair.
         :param Localization localization: The localization to use for the repair.
-        :param int population_size: The size of the population.
         :param int max_generations: The maximum number of generations.
         :param float w_mut: The mutation rate, i.e., the probability of a mutation.
         :param Selection selection: The selection operator to use for the repair.
@@ -52,15 +54,19 @@ class PyMutRepair(GeneticRepair):
         :param float w_neg_t: The weight for the negative test cases.
         """
         self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t)
-        #Exhaustive Search just like kali
         super().__init__(
             initial_candidate=initial_candidate,
             fitness=self.metric,
             localization=localization,
-            population_size=population_size,
+            population_size=1,
             max_generations=max_generations,
             w_mut=w_mut,
-            operators=[ReplaceBinaryOperator, ReplaceBooleanOperator, ReplaceComparisonOperator, ReplaceUnaryOperator], 
+            operators=[
+                ReplaceBinaryOperator,
+                ReplaceBooleanOperator,
+                ReplaceComparisonOperator,
+                ReplaceUnaryOperator,
+            ],
             selection=selection or UniversalSelection(),
             crossover_operator=OnePointCrossover(),
             minimizer=DDMutationMinimizer(),
@@ -89,7 +95,6 @@ class PyMutRepair(GeneticRepair):
         src: os.PathLike,
         excludes: Optional[List[str]],
         localization: Localization,
-        population_size: int,
         max_generations: int,
         w_mut: float,
         selection: Selection = None,
@@ -105,7 +110,6 @@ class PyMutRepair(GeneticRepair):
         :param os.PathLike src: The source directory of the project.
         :param Optional[List[str]] excludes: The set of files to exclude from the statement search.
         :param Localization localization: The localization to use for the repair.
-        :param int population_size: The size of the population.
         :param int max_generations: The maximum number of generations.
         :param float w_mut: The mutation rate, i.e., the probability of a mutation.
         :param Selection selection: The selection operator to use for the repair.
@@ -116,9 +120,10 @@ class PyMutRepair(GeneticRepair):
         :return PyGenProg: The GenProg repair created from the source.
         """
         return PyMutRepair(
-            initial_candidate=PyMutRepair.get_initial_candidate(src, excludes, line_mode),
+            initial_candidate=PyMutRepair.get_initial_candidate(
+                src, excludes, line_mode
+            ),
             localization=localization,
-            population_size=population_size,
             max_generations=max_generations,
             w_mut=w_mut,
             selection=selection,
@@ -143,9 +148,7 @@ class PyMutRepair(GeneticRepair):
         return suggestions
 
     def get_search_strategy(self) -> SearchStrategy:
-        return ExhaustiveStrategy(
-            operators=self.operator,
-            suggestions=self.localize() # or self.suggestions
-        )
-    
+        return ExhaustiveStrategy(operators=self.operator, suggestions=self.suggestions)
+
+
 __all__ = ["PyMutRepair"]
