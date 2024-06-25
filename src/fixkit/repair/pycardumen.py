@@ -9,24 +9,24 @@ from typing import List, Optional, Collection, Tuple
 from itertools import product
 from copy import deepcopy
 
-from pyrep.candidate import GeneticCandidate
-from pyrep.fitness.metric import GenProgFitness
-from pyrep.genetic.crossover import OnePointCrossover
-from pyrep.genetic.minimize import DDMutationMinimizer
-from pyrep.genetic.operators import Replace_Cardumen
-from pyrep.genetic.selection import UniversalSelection, Selection
-from pyrep.genetic.templates import (Template, 
+from fixkit.candidate import GeneticCandidate
+from fixkit.fitness.metric import GenProgFitness
+from fixkit.genetic.crossover import OnePointCrossover
+from fixkit.genetic.minimize import DDMutationMinimizer
+from fixkit.genetic.operators import Replace_Cardumen
+from fixkit.genetic.selection import UniversalSelection, Selection
+from fixkit.genetic.templates import (Template, 
                                      TemplateInstance, 
                                      TemplateInstanceGenerator, 
                                      ProbabilisticModel, 
                                      VarNamesCollector, 
                                      Scope_Constructor,
                                      Scope)
-from pyrep.localization import Localization
-from pyrep.localization.location import WeightedLocation
-from pyrep.repair.repair import GeneticRepair
+from fixkit.localization import Localization
+from fixkit.localization.location import WeightedLocation
+from fixkit.repair.repair import GeneticRepair
 
-from pyrep.logger import debug_logger, info_logger
+from fixkit.logger import debug_logger, info_logger
 
 class PyCardumen(GeneticRepair):
     """
