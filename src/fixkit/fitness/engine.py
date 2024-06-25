@@ -415,19 +415,29 @@ class Tests4PySequentialEngine(SequentialEngine):
         Evaluate the tests of a candidate iteratively and yield the results.
         """
         self.transformer.transform(candidate, self.cwd)
-        for test in tests:
-            report = self.run_tests(
-                tests=test,
-            )
-            if report.raised:
-                if self.raise_on_failure:
-                    raise report.raised
-            if isinstance(report, SystemtestTestReport):
-                results = [(test, report.results[test][0]) for test in report.results]
+        report = t4p.build(self.cwd)
+        if report.raised:
+            candidate.fitness = 0
+            if self.raise_on_failure:
+                raise report.raised
             else:
-                results = report.results
-            for name, result in results:
-                yield name, result
+                yield "build", TestResult.FAILING
+        else:
+            for test in tests:
+                report = self.run_tests(
+                    tests=test,
+                )
+                if report.raised:
+                    if self.raise_on_failure:
+                        raise report.raised
+                if isinstance(report, SystemtestTestReport):
+                    results = [
+                        (test, report.results[test][0]) for test in report.results
+                    ]
+                else:
+                    results = report.results
+                for name, result in results:
+                    yield name, result
 
     def run_tests(self, tests: str = None) -> TestReport:
         """
