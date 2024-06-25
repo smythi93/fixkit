@@ -1,6 +1,6 @@
 import os
 import unittest
-from typing import Generator
+from typing import Generator, List
 
 from fixkit.candidate import GeneticCandidate
 from fixkit.genetic.operators import MutationOperator, Delete, InsertBefore
@@ -56,7 +56,8 @@ class AETest(unittest.TestCase):
                             Delete(identifier=k),
                         ]
                     )
-        actual = list(ae.candidate_repairs(set()))
+        actual: List[GeneticCandidate] = list(ae.candidate_repairs(set()))
+        actual: List[List[MutationOperator]] = [c.mutations for c in actual]
         for e in expected:
             self.assertIn(e, actual)
         for a in actual:
