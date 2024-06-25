@@ -5,6 +5,7 @@ The repair module provides the necessary tools to repair a fault.
 import abc
 import os
 import random
+from copy import deepcopy
 from pathlib import Path
 from typing import Collection, List, Type, Optional, Any
 
@@ -167,6 +168,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         :param bool line_mode: True if the line mode is enabled, False otherwise.
         :return GeneticCandidate: The initial candidate.
         """
+        print(excludes)
         LOGGER.info("Searching for statements in the source.")
         self.statement_finder = StatementFinder(
             src=Path(src), excludes=excludes, line_mode=line_mode

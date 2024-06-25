@@ -8,7 +8,7 @@ import copy
 import random
 from typing import List, Dict, Optional, Set, Type
 
-from pyrep.genetic.templates import Scope_Constructor, TemplateInstance
+from fixkit.genetic.templates import Scope_Constructor, TemplateInstance
 
 
 class MutationOperator(abc.ABC):
