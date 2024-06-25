@@ -31,9 +31,11 @@ dependencies = [
     "pytest>=8.0.2",
     "pytest-cov>=4.1.0",
     "pytest-json-report>=1.5.0",
-    "coverage>=7.4.3",
+    "coverage>=7.5.4",
     "numpy>=1.26.4",
-    "tests4py @ git+https://github.com/smythi93/Tests4Py@52c175fb772eac13bd7e7a85f9945fb1a9ec2a91",
+    "tests4py @ git+https://github.com/smythi93/Tests4Py@baede37342310f9865412a3981ee16307f9cb8ae",
+    "gensim>=4.3.2",
+    "scipy>=1.13.1",
 ]
 
 [project.urls]

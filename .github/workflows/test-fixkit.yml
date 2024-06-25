@@ -1,4 +1,4 @@
-name: Test PyRep
+name: Test FixKit
 
 on:
   push:
