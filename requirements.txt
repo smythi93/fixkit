@@ -5,4 +5,5 @@ pytest-cov>=4.1.0
 pytest-json-report>=1.5.0
 coverage>=7.4.3
 numpy>=1.26.4
+multiset>=3.1.0
 tests4py @ git+https://github.com/smythi93/Tests4Py@baede37342310f9865412a3981ee16307f9cb8ae
