@@ -5,15 +5,19 @@ The pymutrepair module provides the necessary tools to repair a fault using MutR
 import os
 from typing import List, Optional
 
-from fixkit.candidate import Candidate, GeneticCandidate
 from fixkit.fitness.metric import GenProgFitness
 from fixkit.genetic.crossover import OnePointCrossover
 from fixkit.genetic.minimize import DDMutationMinimizer
-from fixkit.genetic.operators import ReplaceBinaryOperator, ReplaceBooleanOperator, ReplaceComparisonOperator, ReplaceUnaryOperator
+from fixkit.genetic.operators import (
+    ReplaceBinaryOperator,
+    ReplaceBooleanOperator,
+    ReplaceComparisonOperator,
+    ReplaceUnaryOperator,
+)
+from fixkit.genetic.selection import UniversalSelection, Selection
 from fixkit.localization import Localization
 from fixkit.localization.location import WeightedLocation
 from fixkit.repair.repair import GeneticRepair
-from fixkit.genetic.selection import UniversalSelection, Selection
 from fixkit.search.search import ExhaustiveStrategy, SearchStrategy
 
 
@@ -40,7 +44,7 @@ class PyMutRepair(GeneticRepair):
     ):
         """
         Initialize the GenProg repair.
-        :param GeneticCandidate initial_candidate: The initial candidate to start the repair.
+        :param os.PathLike src: The source directory of the project.
         :param Localization localization: The localization to use for the repair.
         :param int population_size: The size of the population.
         :param int max_generations: The maximum number of generations.

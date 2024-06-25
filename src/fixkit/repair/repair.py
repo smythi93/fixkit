@@ -98,7 +98,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
     ):
         """
         Initialize the genetic repair.
-        :param GeneticCandidate initial_candidate: The initial candidate to start the repair.
+        :param os.PathLike src: The source directory of the project.
         :param Fitness fitness: The fitness to use for the repair.
         :param Localization localization: The localization to use for the repair.
         :param int population_size: The size of the population.
@@ -168,7 +168,6 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         :param bool line_mode: True if the line mode is enabled, False otherwise.
         :return GeneticCandidate: The initial candidate.
         """
-        print(excludes)
         LOGGER.info("Searching for statements in the source.")
         self.statement_finder = StatementFinder(
             src=Path(src), excludes=excludes, line_mode=line_mode

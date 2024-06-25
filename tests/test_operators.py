@@ -1,16 +1,16 @@
-import ast
 import unittest
-
-from fixkit.candidate import GeneticCandidate
-from fixkit.genetic.operators import Delete, Copy, Rename, Variable_Collector
+from fixkit.genetic.operators import Delete, Copy, Rename, VariableCollector
 from fixkit.genetic.operators import (
     InsertReturn0,
     InsertReturnList,
     InsertReturnString,
     InsertReturnNone,
 )
+from fixkit.genetic.operators import InsertAfter, InsertBefore, InsertBoth, Replace
+import ast
 from fixkit.stmt import StatementFinder
-from utils import SUBJECTS
+from utils import SUBJECTS, REP
+from fixkit.candidate import GeneticCandidate
 
 
 class TestInsertReturn(ast.NodeVisitor):
@@ -55,30 +55,28 @@ class TestOperators(unittest.TestCase):
         self.assertIsInstance(self.mutations[1], ast.Pass)
 
     @unittest.skip
-    # Es gibt ein Problem da wir statment für statment übergeben -> nur globalen scope -> visti_def, visit_class wird nicht getriggert -> die var werden nicht in self.names überschrieben :D
-    # Zweites Problem, wenn das Statment mehr als ein ast.Name enthält ...
     def test_rename_operator(self):
         mutator = Rename(2)
         mutator.mutate(mutations=self.mutations, statements=self.statements)
         print(self.mutations[2])
 
     def test_variable_collector(self):
-        collector = Variable_Collector(self.candidate.statements[2])
+        collector = VariableCollector(self.candidate.statements[2])
         collector.visit(self.candidate.trees["middle.py"])
         var_names = ["x", "y", "z"]
         for name in var_names:
             self.assertTrue(name in collector.names)
 
     def test_insert_return(self):
-        id = 0
+        id_ = 0
         mutators = [
-            InsertReturn0(id),
-            InsertReturnList(id),
-            InsertReturnNone(id),
-            InsertReturnString(id),
+            InsertReturn0(id_),
+            InsertReturnList(id_),
+            InsertReturnNone(id_),
+            InsertReturnString(id_),
         ]
         for mut in mutators:
             mut.mutate(mutations=self.mutations, statements=self.statements)
             test = TestInsertReturn()
-            test.visit(self.mutations[id])
+            test.visit(self.mutations[id_])
             self.assertTrue(test.found)

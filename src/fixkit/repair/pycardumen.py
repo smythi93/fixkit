@@ -85,8 +85,8 @@ class PyCardumen(GeneticRepair):
         self.template_pool: List[Template] = list()
         statements = self.initial_candidate.statements
         files = self.statement_finder.files
-        for id in statements:
-            self.template_pool.append(Template(statements[id], files[id]))
+        for id_ in statements:
+            self.template_pool.append(Template(statements[id_], files[id_]))
 
         collector = Scope_Constructor()
         # the trees of all the files of the program to be repaired
@@ -190,9 +190,7 @@ class PyCardumen(GeneticRepair):
                 tmpl_pool = self.filter_template_pool("local", file, statement)
                 tmpl = self.selecting_template(tmpl_pool, statement)
                 tmpl_instances = self.instance_template(tmpl, statement, scope_stmt)
-                tmpl_instance = self.selecting_template_instance(
-                    candidate.statements, tmpl_instances
-                )
+                tmpl_instance = self.selecting_template_instance(tmpl_instances)
 
                 candidate.mutations.append(
                     ReplaceCardumen(location.identifier, tmpl_instance)
@@ -225,8 +223,9 @@ class PyCardumen(GeneticRepair):
 
         return pool
 
+    @staticmethod
     def selecting_template(
-        self, template_pool: List[Template], statement: ast.AST
+        template_pool: List[Template], statement: ast.AST
     ) -> Template:
         """
         Selects a Template from the Pool by weighted random choice.
@@ -253,8 +252,8 @@ class PyCardumen(GeneticRepair):
 
         return random.choices(population=template_pool, weights=weights, k=1)[0]
 
+    @staticmethod
     def instance_template(
-        self,
         template: Template,
         statement: ast.AST,
         scope_stmt: dict[ast.AST, list[Scope]],
@@ -275,7 +274,7 @@ class PyCardumen(GeneticRepair):
         return tmpl_instances
 
     def selecting_template_instance(
-        self, statements: dict[int, ast.AST], tmpl_instances: List[TemplateInstance]
+        self, tmpl_instances: List[TemplateInstance]
     ) -> ast.AST:
         """
         Selects a Template Instance by random weighted choice.

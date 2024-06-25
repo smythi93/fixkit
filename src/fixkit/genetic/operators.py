@@ -8,7 +8,7 @@ import copy
 import random
 from typing import List, Dict, Optional, Set, Type
 
-from fixkit.genetic.templates import Scope_Constructor, TemplateInstance
+from fixkit.genetic.templates import TemplateInstance
 
 
 class MutationOperator(abc.ABC):
@@ -50,6 +50,9 @@ class MutationOperator(abc.ABC):
         """
         return NotImplemented
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.identifier})"
+
 
 class Delete(MutationOperator):
     """
@@ -84,6 +87,11 @@ class SelectionMutationOperator(MutationOperator, abc.ABC):
         """
         super().__init__(identifier, choices)
         self.selection_identifier = random.choice(self.choices)
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}({self.identifier},{self.selection_identifier})"
+        )
 
 
 class Insert(SelectionMutationOperator, abc.ABC):
@@ -200,24 +208,7 @@ class InsertBoth(Insert):
             and self.inserter == other.inserter
         )
 
-class Replace_Cardumen(MutationOperator):
-    def __init__(self, identifier: int, tmpl_instance: TemplateInstance):
-        super().__init__(identifier, [1])
-        self.tmpl_instance = tmpl_instance
-    
-    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
-        mutations[self.identifier] = self.tmpl_instance.tree
 
-    def __eq__(self, other):
-        return (
-            isinstance(other, Replace_Cardumen) 
-            and self.identifier == other.identifier 
-            and self.tmpl_instance == other.tmpl_instance
-        )
-    
-    def __hash__(self):
-        return super().__hash__()
-        
 class Replace(SelectionMutationOperator):
     """
     Mutation operator for replacing a statement with another statement.
@@ -292,6 +283,8 @@ class OtherMutationOperator(SelectionMutationOperator, abc.ABC):
         :param Dict[int, ast.AST] mutations: The dictionary of mutations to apply to the statements.
         :param Dict[int, ast.AST] statements: The dictionary of original statements if needed for mutating.
         """
+        # Get the statement of the identifier and the statement of the selection identifier with the current mutations
+        # or the statements as default.
         this = mutations.get(self.identifier, statements[self.identifier])
         other = mutations.get(
             self.selection_identifier, statements[self.selection_identifier]
@@ -522,7 +515,6 @@ class Copy(MutationOperator):
         return isinstance(other, Copy) and self.identifier == other.identifier
 
 
-
 class ReplaceOperator(MutationOperator, abc.ABC):
     """
     Mutation operator for replacing an operand in a statement.
@@ -542,13 +534,30 @@ class ReplaceBinaryOperator(ReplaceOperator):
     """
     Mutation operator for replacing a binary operator in a statement.
     """
+
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
+        # is that correct? How differentiated can a statement be?
         if isinstance(statement, ast.BinOp):
-            mutations[self.identfier] = self.mutate_condition(statement)
+            mutations[self.identifier] = self.mutate_condition(statement)
 
-    def mutate_condition(self, statement: ast.BinOp) -> ast.BinOp:
-        all_ops = [ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow, ast.LShift, ast.RShift, ast.BitOr, ast.BitXor, ast.BitAnd, ast.MatMult]
+    @staticmethod
+    def mutate_condition(statement: ast.BinOp) -> ast.BinOp:
+        all_ops = [
+            ast.Add,
+            ast.Sub,
+            ast.Mult,
+            ast.Div,
+            ast.FloorDiv,
+            ast.Mod,
+            ast.Pow,
+            ast.LShift,
+            ast.RShift,
+            ast.BitOr,
+            ast.BitXor,
+            ast.BitAnd,
+            ast.MatMult,
+        ]
         new_op = random.choice(all_ops)
 
         return ast.BinOp(left=statement.left, op=new_op, right=statement.right)
@@ -558,200 +567,247 @@ class ReplaceComparisonOperator(ReplaceOperator):
     """
     Mutation operator for replacing a comparison operator in a statement.
     """
+
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
-        #is that correct? How differentiated can a statement be?
+        # is that correct? How differentiated can a statement be?
         if isinstance(statement, ast.Compare):
-            mutations[self.identfier] = self.mutate_condition(statement)
+            mutations[self.identifier] = self.mutate_condition(statement)
 
-    def mutate_condition(self, statement: ast.Compare) -> ast.Compare:
-        all_ops = [ast.Eq(), ast.NotEq(), ast.Lt(), ast.LtE(), ast.Gt(), ast.GtE(), ast.Is(), ast.IsNot(), ast.NotIn()] 
+    @staticmethod
+    def mutate_condition(statement: ast.Compare) -> ast.Compare:
+        all_ops = [
+            ast.Eq(),
+            ast.NotEq(),
+            ast.Lt(),
+            ast.LtE(),
+            ast.Gt(),
+            ast.GtE(),
+            ast.Is(),
+            ast.IsNot(),
+            ast.NotIn(),
+        ]
         done = False
         new_ops = []
-        while(not done):
+        while not done:
             new_ops = random.choices(all_ops, k=len(statement.ops))
-            if(new_ops != statement.ops):
+            # Problem:   this will always be true -> because in the list are objects even if we iterate over them!
+            # solution1: if we pick the same just ignore it?
+            # solution2: isInstance maybe? and only have classes in all_ops -> must be done for every ReplaceOperator
+            # Problem:   choosing operand pretty similar possible to move it more up
+            if new_ops != statement.ops:
                 done = True
 
         return ast.Compare(statement.left, new_ops, statement.comparators)
 
 
-
 class ReplaceUnaryOperator(ReplaceOperator):
     """
-    Mutation operator for replacing a unary operator in a statement.    
+    Mutation operator for replacing a unary operator in a statement.
     """
 
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
+        # is that correct? How differentiated can a statement be?
         if isinstance(statement, ast.UnaryOp):
-            mutations[self.identfier] = self.mutate_condition(statement)
+            mutations[self.identifier] = self.mutate_condition(statement)
 
-    def mutate_condition(self, statement: ast.UnaryOp) -> ast.UnaryOp:
+    @staticmethod
+    def mutate_condition(statement: ast.UnaryOp) -> ast.UnaryOp:
         all_ops = [ast.UAdd, ast.USub, ast.Not, ast.Invert]
         new_op = random.choice(all_ops)
 
         return ast.UnaryOp(op=new_op(), operand=statement.operand)
 
+
 class ReplaceBooleanOperator(ReplaceOperator):
     """
     Mutation operator for replacing a boolean operator in a statement.
     """
+
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
+        # is that correct? How differentiated can a statement be?
         if isinstance(statement, ast.BoolOp):
-            mutations[self.identfier] = self.mutate_condition(statement)
+            mutations[self.identifier] = self.mutate_condition(statement)
 
-    def mutate_condition(self, statement: ast.BoolOp) -> ast.BoolOp:
+    @staticmethod
+    def mutate_condition(statement: ast.BoolOp) -> ast.BoolOp:
         all_ops = [ast.And, ast.Or]
         new_op = random.choice(all_ops)
 
-        return ast.BoolOp(op=new_op(), values = statement.values)
+        return ast.BoolOp(op=new_op(), values=statement.values)
+
 
 class Rename(MutationOperator):
     """
     Mutation operator for renaming an identifier in a statement.
     """
-    def __init__(self, identifier: int, program: ast.AST, choices: List[int] | None = None):
-        self.program = program
-        super().__init__(identifier, choices)
 
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
-        constructor = Scope_Constructor()
-        constructor.search(self.program)
-        scope_stmt = constructor.scope_stmt
-        scopes = scope_stmt[statement]
-        all_idfs = set()
-        for scope in scopes:
-            for var in scope.vars:
-                all_idfs.add(var)
-        new_name = random.choice(tuple(all_idfs))
-
+        all_ids = set()
+        for id_ in statements:
+            collector = VariableCollector(id_)
+            collector.visit(statements[id_])
+            print(collector.names)
+            for name in collector.names:
+                all_ids.add(name)
+        new_name = random.choice(tuple(all_ids))
         mutations[self.identifier] = self._mutate_name(statement, new_name)
-    
-    def _mutate_name(self, statement, new_name):
+
+    @staticmethod
+    def _mutate_name(statement, new_name):
         return NameTransformer(new_name).visit(statement)
 
     def __hash__(self):
         return super().__hash__()
 
     def __eq__(self, other):
-        return False 
+        return False
+
 
 class NameTransformer(ast.NodeTransformer):
-    '''
-    Chooses a random name stmt in the stmt and changes it using the Reservoir Sampling Algorithm.
-    '''
     def __init__(self, new_name: str) -> None:
-        super().__init__()
         self.new_name = new_name
-        self.selected_node = None
-        self.name_count = 0
+        super().__init__()
 
     def visit_Name(self, node: ast.Name):
-        self.name_count += 1
-        if random.randint(1, self.name_count) == 1:
-            self.selected_node = node
+        return ast.Name(id=self.new_name, ctx=node.ctx)
 
+
+class VariableCollector(ast.NodeVisitor):
+    """
+    Collects the variable which are in the same scope as the statement
+    """
+
+    def __init__(self, statement: ast.stmt):
+        self.names = set()
+        self.found = False
+        self.statement = statement
+        self.scope_stack = [set()]
+
+    def visit_Name(self, node: ast.Name):
+        self.scope_stack[-1].add(node.id)
         self.generic_visit(node)
-        return node
 
-    def transform(self, node: ast.AST):
-        self.visit(node)
-        
-        return self._transform_target(node)
-    
-    def _transform_target(self, node: ast.AST):
-        if isinstance(node, ast.Name) and node == self.selected_node:
-            return ast.Name(id=self.new_name, ctx=node.ctx)
-        
-        for field, value in ast.iter_fields(node):
-            if isinstance(value, list):
-                for i, item in enumerate(value):
-                    if isinstance(item, ast.AST):
-                        value[i] = self._transform_target(item)
-            elif isinstance(value, ast.AST):
-                setattr(node, field, self._transform_target(value))
-        
-        return node
+    def visit_FunctionDef(self, node: ast.FunctionDef):
+        self.visit_Helper(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef):
+        self.visit_Helper(node)
+
+    def visit_ClassDef(self, node: ast.ClassDef):
+        self.visit_Helper(node)
+
+    def visit_Helper(self, node):
+        # opening new scope
+        self.scope_stack.append(set())
+        self.generic_visit(node)
+        if self.found:
+            for scope in self.scope_stack:
+                for name in scope:
+                    self.names.add(name)
+            self.found = False
+        # closing scope
+        self.scope_stack.pop()
+
+    def generic_visit(self, node: ast.AST):
+        if self.statement == node:
+            self.found = True
+        return super().generic_visit(node)
 
 
 class ModifyIfCondition(MutationOperator, abc.ABC):
-
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
-        id = self.identifier
-        statement = mutations.get(id, statements[id])
+        id_ = self.identifier
+        statement = mutations.get(id_, statements[id_])
         if isinstance(statement, ast.If):
-            mutations[id] = self.mutate_condition(statement)
+            mutations[id_] = self.mutate_condition(statement)
 
     def mutate_condition(self, statement: ast.If) -> ast.If:
-        return ast.If(test=self.get_replace_condition(), body=statement.body, orelse=statement.orelse)
+        return ast.If(
+            test=self.get_replace_condition(),
+            body=statement.body,
+            orelse=statement.orelse,
+        )
 
     @abc.abstractmethod
     def get_replace_condition(self) -> ast.expr:
         pass
-    
+
     def __hash__(self):
         return super().__hash__()
-    
-    def __eq__(self,other):
+
+    def __eq__(self, other):
         return False
 
-class ModifyIfToTrue(ModifyIfCondition):
 
+class ModifyIfToTrue(ModifyIfCondition):
     def get_replace_condition(self) -> ast.expr:
         return ast.Constant(value=True)
 
-class ModifyIfToFalse(ModifyIfCondition):
 
+class ModifyIfToFalse(ModifyIfCondition):
     def get_replace_condition(self) -> ast.expr:
         return ast.Constant(value=False)
 
+
 class InsertReturn(MutationOperator, abc.ABC):
     """
-    Inserts a random return statment before or after the statement
+    Inserts a random return statement before or after the statement
     """
+
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         mutations[self.identifier] = self.insert(
             mutations.get(self.identifier, statements[self.identifier]),
         )
 
     def insert(self, tree: ast.AST) -> ast.AST:
-        return random.choice([ast.Module(body=[self.get_return_statement(), tree], type_ignores=[]),
-                             ast.Module(body=[tree, self.get_return_statement()], type_ignores=[])])
-    
-    def __eq__(self,other):
+        return random.choice(
+            [
+                ast.Module(body=[self.get_return_statement(), tree], type_ignores=[]),
+                ast.Module(body=[tree, self.get_return_statement()], type_ignores=[]),
+            ]
+        )
+
+    def __eq__(self, other):
         return False
-    
+
     def __hash__(self):
         return super().__hash__()
-    
+
     @abc.abstractmethod
-    def get_return_statement() -> ast.Return:
+    def get_return_statement(self) -> ast.Return:
         pass
+
 
 class InsertReturn0(InsertReturn):
     def get_return_statement(self) -> ast.Return:
         return ast.Return(value=ast.Constant(0))
 
+
 class InsertReturnNone(InsertReturn):
     def get_return_statement(self) -> ast.Return:
         return ast.Return(value=ast.Constant(None))
+
 
 class InsertReturnString(InsertReturn):
     def get_return_statement(self) -> ast.Return:
         return ast.Return(value=ast.Constant(""))
 
+
 class InsertReturnList(InsertReturn):
     def get_return_statement(self) -> ast.Return:
-        #ast.List used correctly?
+        # ast.List used correctly?
         return ast.Return(value=ast.List(elts=[], ctx=ast.Load))
+
 
 class InsertReturnTuple(InsertReturn):
     def get_return_statement(self) -> ast.Return:
-        #ast.Tuple used correctly?
+        # ast.Tuple used correctly?
         return ast.Return(value=ast.Tuple(elts=[], ctx=ast.Load))
+
 
 class Mutator(ast.NodeTransformer):
     """
@@ -823,6 +879,25 @@ class Mutator(ast.NodeTransformer):
         return set(self.identifier_map.keys())
 
 
+class ReplaceCardumen(MutationOperator):
+    def __init__(self, identifier: int, tmpl_instance: TemplateInstance):
+        super().__init__(identifier, [1])
+        self.tmpl_instance = tmpl_instance
+
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        mutations[self.identifier] = self.tmpl_instance.tree
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReplaceCardumen)
+            and self.identifier == other.identifier
+            and self.tmpl_instance == other.tmpl_instance
+        )
+
+    def __hash__(self):
+        return super().__hash__()
+
+
 __all__ = [
     "MutationOperator",
     "Delete",
@@ -835,5 +910,19 @@ __all__ = [
     "MoveBoth",
     "Swap",
     "Copy",
+    "ReplaceBinaryOperator",
+    "ReplaceComparisonOperator",
+    "ReplaceUnaryOperator",
+    "ReplaceBooleanOperator",
+    "Rename",
+    "ModifyIfToFalse",
+    "ModifyIfToTrue",
+    "InsertReturn0",
+    "InsertReturnNone",
+    "InsertReturnString",
+    "InsertReturnList",
+    "InsertReturnTuple",
+    "ReplaceCardumen",
+    "VariableCollector",
     "Mutator",
 ]

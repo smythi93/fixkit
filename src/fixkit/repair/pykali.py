@@ -11,9 +11,16 @@ from fixkit.candidate import Candidate, GeneticCandidate
 from fixkit.fitness.metric import GenProgFitness
 from fixkit.genetic.crossover import OnePointCrossover
 from fixkit.genetic.minimize import DDMutationMinimizer
-from fixkit.genetic.operators import (Delete, ModifyIfToFalse, ModifyIfToTrue,
-                                     InsertReturn0, InsertReturnNone, InsertReturnString, 
-                                     InsertReturnTuple, InsertReturnList)
+from fixkit.genetic.operators import (
+    Delete,
+    ModifyIfToFalse,
+    ModifyIfToTrue,
+    InsertReturn0,
+    InsertReturnNone,
+    InsertReturnString,
+    InsertReturnTuple,
+    InsertReturnList,
+)
 from fixkit.localization import Localization
 from fixkit.localization.location import WeightedLocation
 from fixkit.repair.repair import GeneticRepair
@@ -53,17 +60,26 @@ class PyKali(GeneticRepair):
         :param float w_pos_t: The weight for the positive test cases.
         :param float w_neg_t: The weight for the negative test cases.
         """
-        self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t) #still uses GenProgFitness -> ??
+        self.metric = GenProgFitness(
+            set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t
+        )  # still uses GenProgFitness -> ??
         super().__init__(
             initial_candidate=initial_candidate,
-            fitness=self.metric, 
+            fitness=self.metric,
             localization=localization,
             population_size=1,
-            max_generations=max_generations, 
+            max_generations=max_generations,
             w_mut=w_mut,
-            operators=[Delete, ModifyIfToTrue, ModifyIfToFalse, 
-                       InsertReturnList, InsertReturnTuple, InsertReturn0, 
-                       InsertReturnString, InsertReturnNone], 
+            operators=[
+                Delete,
+                ModifyIfToTrue,
+                ModifyIfToFalse,
+                InsertReturnList,
+                InsertReturnTuple,
+                InsertReturn0,
+                InsertReturnString,
+                InsertReturnNone,
+            ],
             selection=selection or UniversalSelection(),
             crossover_operator=OnePointCrossover(),
             minimizer=DDMutationMinimizer(),
@@ -76,7 +92,7 @@ class PyKali(GeneticRepair):
     @classmethod
     def from_source(
         cls, src: os.PathLike, excludes: Optional[List[str]] = None, *args, **kwargs
-    ) -> "GeneticRepair": 
+    ) -> "GeneticRepair":
         """
         Abstract method for creating a genetic repair from the source.
         :param os.PathLike src: The source directory of the project.
@@ -101,7 +117,7 @@ class PyKali(GeneticRepair):
         w_neg_t: float = 10,
         is_t4p: bool = False,
         line_mode: bool = False,
-    ) -> "PyKali": 
+    ) -> "PyKali":
         """
         Create a Kali repair from the source.
         :param os.PathLike src: The source directory of the project.
@@ -142,13 +158,11 @@ class PyKali(GeneticRepair):
             self.localization.failing,
         )
         return suggestions
-    
+
     def get_search_strategy(self) -> SearchStrategy:
         return ExhaustiveStrategy(
-            operators=self.operator,
-            suggestions=self.localize() # or self.suggestions
+            operators=self.operator, suggestions=self.localize()  # or self.suggestions
         )
-
 
 
 __all__ = ["PyKali"]
