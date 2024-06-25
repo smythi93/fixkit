@@ -8,7 +8,6 @@ from fixkit.repair.patch import write_patches
 from fixkit.repair.pycardumen import PyCardumen
 from utils import SUBJECTS, REP, SFL
 
-
 class TestCardumen(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(REP, ignore_errors=True)
