@@ -231,7 +231,7 @@ class Tests4PyWorker(Worker):
         :return: The report of the tests.
         """
         return t4p.test(
-            self.cwd,
+            self.cwd.absolute(),
             relevant_tests=True,
             xml_output=XML_OUTPUT(self.identifier),
         )
@@ -314,7 +314,7 @@ class Tests4PySystemTestWorker(Tests4PyWorker):
         Run the system tests leveraging Tests4Py.
         :return: The report of the tests.
         """
-        return t4p.systemtest_test(self.cwd, path_or_str=self.tests)
+        return t4p.systemtest_test(self.cwd.absolute(), path_or_str=self.tests)
 
 
 class Tests4PySystemTestEngine(Tests4PyEngine):
@@ -445,10 +445,10 @@ class Tests4PySequentialEngine(SequentialEngine):
         :return: The report of the tests.
         """
         return t4p.test(
-            self.cwd,
+            self.cwd.absolute(),
             single_test=tests,
-            relevant_tests=True,
-            xml_output=XML_OUTPUT("iterative"),
+            relevant_tests=tests is None,
+            xml_output=XML_OUTPUT(self.identifier),
         )
 
     def evaluate(self, candidates: Population):
@@ -487,7 +487,7 @@ class Tests4PySystemTestSequentialEngine(Tests4PySequentialEngine):
         Run the tests leveraging Tests4Py.
         :return: The report of the tests.
         """
-        return t4p.systemtest_test(self.cwd, path_or_str=self.tests)
+        return t4p.systemtest_test(self.cwd.absolute(), path_or_str=self.tests)
 
 
 __all__ = [
