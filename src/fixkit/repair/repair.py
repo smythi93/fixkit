@@ -249,7 +249,10 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
 
     def finalize_repair(self):
         # Minimize the population and return the best candidates.
-        fitness = max(c.fitness for c in self.population)
+        if self.population:
+            fitness = max(c.fitness for c in self.population)
+        else:
+            fitness = 0
         LOGGER.info("The best candidate has a fitness of %.2f.", fitness)
         self.population = [c for c in self.population if c.fitness == fitness]
         self.population = self.filter_population(self.population)
