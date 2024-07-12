@@ -34,7 +34,7 @@ class Tests4PyLocalization(SFLKitLocalization):
         if report.raised:
             raise report.raised
         # Run the tests and record the events.
-        report = sfl.sflkit_unittest(self.config.instrument_working)
+        report = self._run_tests()
         if report.raised:
             raise report.raised
 
@@ -90,4 +90,4 @@ class Tests4PySystemtestsLocalization(Tests4PyLocalization):
         Run the tests leveraging Tests4Py's sfl interface.
         :return: The report of the tests.
         """
-        return sfl.sflkit_systemtests(self.config.instrument_working, self.tests)
+        return sfl.sflkit_systemtest(self.config.instrument_working, list(self.tests))
