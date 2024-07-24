@@ -194,13 +194,13 @@ def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dic
 def main(args):
     random.seed(0)
     np.random.seed(0)
-    #for key in APPROACHES:
-    approach, parameters = APPROACHES["GENPROG"]
-    evaluate(approach, QUESTION_1, parameters)
-    #evaluate(approach, QUESTION_2, parameters)
-    #evaluate(approach, QUESTION_3, parameters)
-    #evaluate(approach, QUESTION_4, parameters)
-    #evaluate(approach, QUESTION_5, parameters)
+    for key in APPROACHES:
+        approach, parameters = APPROACHES[key]
+        #evaluate(approach, QUESTION_1, parameters)
+        evaluate(approach, QUESTION_2, parameters)
+        evaluate(approach, QUESTION_3, parameters)
+        evaluate(approach, QUESTION_4, parameters)
+        evaluate(approach, QUESTION_5, parameters)
  
     
 if __name__ == "__main__":
