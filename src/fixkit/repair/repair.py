@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Collection, List, Type, Optional, Any
 
 from fixkit.candidate import Candidate, GeneticCandidate
-from fixkit.constants import DEFAULT_WORK_DIR
+from fixkit.constants import DEFAULT_WORK_DIR, EPSILON
 from fixkit.fitness.engine import (
     Tests4PyEngine,
     ParallelEngine,
@@ -278,7 +278,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         Check if the repair should be aborted.
         :return bool: True if the repair should be aborted, False otherwise.
         """
-        return max(c.fitness for c in self.population) >= 1 - 1e-8
+        return max(c.fitness for c in self.population) >= 1 - EPSILON
 
     def iteration(self):
         """

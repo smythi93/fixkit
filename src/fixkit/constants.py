@@ -41,4 +41,12 @@ DEFAULT_EXCLUDES = [
     "*tests4py*",
 ]
 
-__all__ = ["DEFAULT_EXCLUDES", "DEFAULT_WORK_DIR", "SFLKIT_EVENTS_PATH"]
+EPSILON = 1e-8
+
+__all__ = [
+    "DEFAULT_EXCLUDES",
+    "DEFAULT_WORK_DIR",
+    "SFLKIT_EVENTS_PATH",
+    "EPSILON",
+    "XML_OUTPUT",
+]
