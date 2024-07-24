@@ -9,6 +9,7 @@ from typing import List
 import numpy.random
 
 from fixkit.candidate import GeneticCandidate
+from fixkit.constants import EPSILON
 
 
 class Selection(abc.ABC):
@@ -63,6 +64,9 @@ class UniversalSelection(Selection):
         fitness = numpy.array([c.fitness for c in population], dtype=float)
         array = numpy.empty(len(population), dtype=GeneticCandidate)
         array[:] = population[:]
+        sum_fitness = sum(fitness)
+        if sum_fitness <= EPSILON:
+            return random.sample(population, k=population_size)
         return numpy.random.choice(
             array,
             size=population_size,
@@ -93,11 +97,15 @@ class TournamentSelection(Selection):
             fitness = numpy.array([c.fitness for c in tournament], dtype=float)
             array = numpy.empty(len(tournament), dtype=GeneticCandidate)
             array[:] = tournament[:]
-            choice = numpy.random.choice(
-                array,
-                size=1,
-                p=fitness / sum(fitness),
-            )[0]
+            sum_fitness = sum(fitness)
+            if sum_fitness <= EPSILON:
+                choice = random.choice(array)
+            else:
+                choice = numpy.random.choice(
+                    array,
+                    size=1,
+                    p=fitness / sum(fitness),
+                )[0]
             candidates.append(choice)
             population.remove(choice)
         return candidates
