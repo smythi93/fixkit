@@ -5,6 +5,7 @@ from fixkit.genetic.operators import (
     InsertReturnList,
     InsertReturnString,
     InsertReturnNone,
+    ReplaceRelationalGreaterOperator,
 )
 from fixkit.genetic.operators import InsertAfter, InsertBefore, InsertBoth, Replace
 import ast
@@ -32,13 +33,21 @@ class TestOperators(unittest.TestCase):
     def setUp(self):
         source_code = """z = 4 + 9"""
         tree = ast.parse(source_code)
+        source_code2= """x < 3"""
+        tree2 = ast.parse(source_code2)
         self.statements = {
             0: ast.Add(),
             1: ast.BinOp(ast.Constant(4), ast.Add(), ast.Constant(9)),
             2: tree,
+            3: ast.Compare(left=ast.Name(id='x', ctx=ast.Load()), ops=[ast.Lt()], comparators=[ast.Constant(value=3)])
         }
 
-        self.mutations = {0: ast.Pass(), 1: None, 2: ast.Pass()}
+        self.mutations = {
+            0: ast.Pass(), 
+            1: None, 
+            2: ast.Pass(), 
+            3: ast.Compare(left=ast.Name(id='x', ctx=ast.Load()), ops=[ast.Lt()], comparators=[ast.Constant(value=3)])
+        }
 
         finder = StatementFinder(SUBJECTS / "middle", excludes=["tests.py"])
         finder.search_source()
@@ -80,3 +89,13 @@ class TestOperators(unittest.TestCase):
             test = TestInsertReturn()
             test.visit(self.mutations[id_])
             self.assertTrue(test.found)
+
+    def test_rel_operator(self):
+        mutator = ReplaceRelationalGreaterOperator(3)
+        mutator.mutate(mutations=self.mutations, statements=self.statements)
+        print(ast.unparse(self.statements[3]))
+        print(ast.unparse(self.mutations[3]))
+
+
+if __name__ == "__main__":
+    unittest.main()

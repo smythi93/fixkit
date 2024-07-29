@@ -529,116 +529,133 @@ class ReplaceOperator(MutationOperator, abc.ABC):
     def __eq__(self, other):
         return False
 
-
-class ReplaceBinaryOperator(ReplaceOperator):
-    """
-    Mutation operator for replacing a binary operator in a statement.
-    """
-
+class ReplaceRelationalGreaterOperator(ReplaceOperator):
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
-        # is that correct? How differentiated can a statement be?
-        if isinstance(statement, ast.BinOp):
-            mutations[self.identifier] = self.mutate_condition(statement)
-
-    @staticmethod
-    def mutate_condition(statement: ast.BinOp) -> ast.BinOp:
-        all_ops = [
-            ast.Add,
-            ast.Sub,
-            ast.Mult,
-            ast.Div,
-            ast.FloorDiv,
-            ast.Mod,
-            ast.Pow,
-            ast.LShift,
-            ast.RShift,
-            ast.BitOr,
-            ast.BitXor,
-            ast.BitAnd,
-            ast.MatMult,
-        ]
-        new_op = random.choice(all_ops)
-
-        return ast.BinOp(left=statement.left, op=new_op, right=statement.right)
+        
+        if isinstance(statement, ast.If):
+            if isinstance(statement.test, ast.Compare):
+                new_operands = [ast.Gt() for operand in statement.test.ops]
+                new_compare = ast.Compare(statement.test.left, new_operands, statement.test.comparators)
+                new_if = ast.If(test=new_compare, body=statement.body, orelse=statement.orelse)
+            else:
+                new_if = statement
+            mutations[self.identifier] = new_if
 
 
-class ReplaceComparisonOperator(ReplaceOperator):
-    """
-    Mutation operator for replacing a comparison operator in a statement.
-    """
-
+class ReplaceRelationalGreaterEqualOperator(ReplaceOperator):
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
-        # is that correct? How differentiated can a statement be?
-        if isinstance(statement, ast.Compare):
-            mutations[self.identifier] = self.mutate_condition(statement)
+        
+        if isinstance(statement, ast.If):
+            if isinstance(statement.test, ast.Compare):
+                new_operands = [ast.GtE() for operand in statement.test.ops]
+                new_compare = ast.Compare(statement.test.left, new_operands, statement.test.comparators)
+                new_if = ast.If(test=new_compare, body=statement.body, orelse=statement.orelse)
+            else:
+                new_if = statement
+            mutations[self.identifier] = new_if
 
-    @staticmethod
-    def mutate_condition(statement: ast.Compare) -> ast.Compare:
-        all_ops = [
-            ast.Eq(),
-            ast.NotEq(),
-            ast.Lt(),
-            ast.LtE(),
-            ast.Gt(),
-            ast.GtE(),
-            ast.Is(),
-            ast.IsNot(),
-            ast.NotIn(),
-        ]
-        done = False
-        new_ops = []
-        while not done:
-            new_ops = random.choices(all_ops, k=len(statement.ops))
-            # Problem:   this will always be true -> because in the list are objects even if we iterate over them!
-            # solution1: if we pick the same just ignore it?
-            # solution2: isInstance maybe? and only have classes in all_ops -> must be done for every ReplaceOperator
-            # Problem:   choosing operand pretty similar possible to move it more up
-            if new_ops != statement.ops:
-                done = True
-
-        return ast.Compare(statement.left, new_ops, statement.comparators)
-
-
-class ReplaceUnaryOperator(ReplaceOperator):
-    """
-    Mutation operator for replacing a unary operator in a statement.
-    """
-
+class ReplaceRelationalSmallerOperator(ReplaceOperator):
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
-        # is that correct? How differentiated can a statement be?
-        if isinstance(statement, ast.UnaryOp):
-            mutations[self.identifier] = self.mutate_condition(statement)
+        
+        if isinstance(statement, ast.If):
+            if isinstance(statement.test, ast.Compare):
+                new_operands = [ast.Lt() for operand in statement.test.ops]
+                new_compare = ast.Compare(statement.test.left, new_operands, statement.test.comparators)
+                new_if = ast.If(test=new_compare, body=statement.body, orelse=statement.orelse)
+            else:
+                new_if = statement
+            mutations[self.identifier] = new_if
 
-    @staticmethod
-    def mutate_condition(statement: ast.UnaryOp) -> ast.UnaryOp:
-        all_ops = [ast.UAdd, ast.USub, ast.Not, ast.Invert]
-        new_op = random.choice(all_ops)
-
-        return ast.UnaryOp(op=new_op(), operand=statement.operand)
-
-
-class ReplaceBooleanOperator(ReplaceOperator):
-    """
-    Mutation operator for replacing a boolean operator in a statement.
-    """
-
+class ReplaceRelationalSmallerEqualOperator(ReplaceOperator):
     def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
         statement = mutations.get(self.identifier, statements[self.identifier])
-        # is that correct? How differentiated can a statement be?
-        if isinstance(statement, ast.BoolOp):
-            mutations[self.identifier] = self.mutate_condition(statement)
+        
+        if isinstance(statement, ast.If):
+            if isinstance(statement.test, ast.Compare):
+                new_operands = [ast.LtE() for operand in statement.test.ops]
+                new_compare = ast.Compare(statement.test.left, new_operands, statement.test.comparators)
+                new_if = ast.If(test=new_compare, body=statement.body, orelse=statement.orelse)
+            else:
+                new_if = statement
+            mutations[self.identifier] = new_if
 
-    @staticmethod
-    def mutate_condition(statement: ast.BoolOp) -> ast.BoolOp:
-        all_ops = [ast.And, ast.Or]
-        new_op = random.choice(all_ops)
+class ReplaceRelationalEqualOperator(ReplaceOperator):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        
+        if isinstance(statement, ast.If):
+            if isinstance(statement.test, ast.Compare):
+                new_operands = [ast.Eq() for operand in statement.test.ops]
+                new_compare = ast.Compare(statement.test.left, new_operands, statement.test.comparators)
+                new_if = ast.If(test=new_compare, body=statement.body, orelse=statement.orelse)
+            else:
+                new_if = statement
+            mutations[self.identifier] = new_if
 
-        return ast.BoolOp(op=new_op(), values=statement.values)
+class ReplaceRelationalNotEqualOperator(ReplaceOperator):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        
+        if isinstance(statement, ast.If):
+            if isinstance(statement.test, ast.Compare):
+                new_operands = [ast.NotEq() for operand in statement.test.ops]
+                new_compare = ast.Compare(statement.test.left, new_operands, statement.test.comparators)
+                new_if = ast.If(test=new_compare, body=statement.body, orelse=statement.orelse)
+            else:
+                new_if = statement
+            mutations[self.identifier] = new_if
 
+class ReplaceLogicalOrOperator(ReplaceOperator):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        
+        if isinstance(statement, ast.If):
+            if isinstance(statement.test, ast.BoolOp):
+                new_logical = ast.BoolOp(op=ast.Or(), values=statement.values)
+                new_if = ast.If(test=new_logical, body=statement.body, orelse=statement.orelse)
+            else:
+                new_if = statement
+            mutations[self.identifier] = new_if
 
+class ReplaceLogicalAndOperator(ReplaceOperator):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        
+        if isinstance(statement, ast.If):
+            if isinstance(statement.test, ast.BoolOp):
+                new_logical = ast.BoolOp(op=ast.And(), values=statement.values)
+                new_if = ast.If(test=new_logical, body=statement.body, orelse=statement.orelse)
+            else:
+                new_if = statement
+            mutations[self.identifier] = new_if
+
+class ReplaceUnaryNotOperator(ReplaceOperator):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        
+        if isinstance(statement, ast.If):
+            if isinstance(statement, ast.UnaryOp):
+                new_unary = ast.UnaryOp(op=ast.Not(), operand=statement.operand)
+                new_if = ast.If(test=new_unary, body=statement.body, orelse=statement.orelse)
+            else:
+                new_if = statement
+            mutations[self.identifier] = new_if
+
+class ReplaceUnaryInvertOperator(ReplaceOperator):
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        statement = mutations.get(self.identifier, statements[self.identifier])
+        
+        if isinstance(statement, ast.If):
+            if isinstance(statement, ast.UnaryOp):
+                new_unary = ast.UnaryOp(op=ast.Invert(), operand=statement.operand)
+                new_if = ast.If(test=new_unary, body=statement.body, orelse=statement.orelse)
+            else:
+                new_if = statement
+            mutations[self.identifier] = new_if
+            
 class Rename(MutationOperator):
     """
     Mutation operator for renaming an identifier in a statement.
@@ -808,6 +825,23 @@ class InsertReturnTuple(InsertReturn):
         # ast.Tuple used correctly?
         return ast.Return(value=ast.Tuple(elts=[], ctx=ast.Load))
 
+class ReplaceCardumen(MutationOperator):
+    def __init__(self, identifier: int, tmpl_instance: TemplateInstance):
+        super().__init__(identifier, [1])
+        self.tmpl_instance = tmpl_instance
+
+    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
+        mutations[self.identifier] = self.tmpl_instance.tree
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, ReplaceCardumen)
+            and self.identifier == other.identifier
+            and self.tmpl_instance == other.tmpl_instance
+        )
+
+    def __hash__(self):
+        return super().__hash__()
 
 class Mutator(ast.NodeTransformer):
     """
@@ -879,23 +913,7 @@ class Mutator(ast.NodeTransformer):
         return set(self.identifier_map.keys())
 
 
-class ReplaceCardumen(MutationOperator):
-    def __init__(self, identifier: int, tmpl_instance: TemplateInstance):
-        super().__init__(identifier, [1])
-        self.tmpl_instance = tmpl_instance
 
-    def mutate(self, mutations: Dict[int, ast.AST], statements: Dict[int, ast.AST]):
-        mutations[self.identifier] = self.tmpl_instance.tree
-
-    def __eq__(self, other):
-        return (
-            isinstance(other, ReplaceCardumen)
-            and self.identifier == other.identifier
-            and self.tmpl_instance == other.tmpl_instance
-        )
-
-    def __hash__(self):
-        return super().__hash__()
 
 
 __all__ = [

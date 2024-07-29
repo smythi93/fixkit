@@ -9,10 +9,16 @@ from fixkit.fitness.metric import GenProgFitness
 from fixkit.genetic.crossover import OnePointCrossover
 from fixkit.genetic.minimize import DDMutationMinimizer
 from fixkit.genetic.operators import (
-    ReplaceBinaryOperator,
-    ReplaceBooleanOperator,
-    ReplaceComparisonOperator,
-    ReplaceUnaryOperator,
+    ReplaceLogicalAndOperator,
+    ReplaceLogicalOrOperator,
+    ReplaceRelationalEqualOperator,
+    ReplaceRelationalNotEqualOperator,
+    ReplaceRelationalGreaterOperator,
+    ReplaceRelationalGreaterEqualOperator,
+    ReplaceRelationalSmallerOperator,
+    ReplaceRelationalSmallerEqualOperator,
+    ReplaceUnaryNotOperator,
+    ReplaceUnaryInvertOperator
 )
 from fixkit.genetic.selection import UniversalSelection, Selection
 from fixkit.localization import Localization
@@ -62,10 +68,16 @@ class PyMutRepair(GeneticRepair):
             max_generations=max_generations,
             w_mut=w_mut,
             operators=[
-                ReplaceBinaryOperator,
-                ReplaceBooleanOperator,
-                ReplaceComparisonOperator,
-                ReplaceUnaryOperator,
+                ReplaceLogicalAndOperator,
+                ReplaceLogicalOrOperator,
+                ReplaceRelationalEqualOperator,
+                ReplaceRelationalNotEqualOperator,
+                ReplaceRelationalGreaterOperator,
+                ReplaceRelationalGreaterEqualOperator,
+                ReplaceRelationalSmallerOperator,
+                ReplaceRelationalSmallerEqualOperator,
+                ReplaceUnaryNotOperator,
+                ReplaceUnaryInvertOperator
             ],
             selection=selection or UniversalSelection(),
             crossover_operator=OnePointCrossover(),
