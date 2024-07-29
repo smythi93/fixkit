@@ -53,7 +53,6 @@ APPROACHES = {
             "workers": 32,
         },
     ),
-    "DEEPREPAIR": (None, {}),
     "CARDUMEN": (
         PyCardumen,
         {
@@ -64,7 +63,6 @@ APPROACHES = {
         },
     ),
     "AE": (PyAE, {"k": 1}),
-    "SPR": (None, {}),
 }
 
 def almost_equal(value, target, delta=0.0001):
@@ -141,34 +139,39 @@ def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dic
         test_files = get_test_files(subject_path)
         candidate_name = get_candidate_name(subject_path)
         excludes = get_excludes(subject_path)
-        
-        print(subject_path)
-        print(test_files)
-        print(candidate_name)
-        print(excludes)
 
+        #used for the txt write later on
+        question_pattern = re.compile('question_.')
+        match = question_pattern.search(str(question_path))
+        question = match.group()
+
+        
         start = time.time()
 
         localization = CoverageLocalization(
-            src=subject_path,
-            cov=candidate_name,
-            tests=test_files,
-            metric="Ochiai",
-            out=REP
-        )
+                src=subject_path,
+                cov=candidate_name,
+                tests=test_files,
+                metric="Ochiai",
+                out=REP
+            )
 
         repair = appraoch.from_source(
-            src=subject_path,
-            excludes=excludes,
-            localization=localization,
-            out=REP,
-            **parameters
-        )
-        
+                src=subject_path,
+                excludes=excludes,
+                localization=localization,
+                out=REP,
+                **parameters
+            )
+            
         patches = repair.repair()
-        
+            
         duration = time.time() - start
-        
+        #except Exception as ep:
+            #path = os.path.join(Path(__file__).parent, f"{repair.__class__.__name__}_{question}.txt")
+            #with open(path, "a") as f:
+                #f.write(f"{repair.__class__.__name__},{number},{ep.__class__.__name__}\n")
+        #else:
         found = False
         engine = Tests4PyEngine(AbsoluteFitness(set(), set()), workers=32, out="rep")
         engine.evaluate(patches)
@@ -176,12 +179,7 @@ def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dic
             if almost_equal(patch.fitness, 1):
                 found = True
                 break
-        
-        question_pattern = re.compile('question_.')
-        match = question_pattern.search(str(question_path))
-        if match:
-            question = match.group()
-        
+            
         path = os.path.join(Path(__file__).parent, f"{repair.__class__.__name__}_{question}.txt")
         with open(path, "a") as f:
             f.write(f"{repair.__class__.__name__},{number},{found},{duration}\n")
@@ -194,13 +192,13 @@ def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dic
 def main(args):
     random.seed(0)
     np.random.seed(0)
-    for key in APPROACHES:
-        approach, parameters = APPROACHES[key]
-        #evaluate(approach, QUESTION_1, parameters)
-        evaluate(approach, QUESTION_2, parameters)
-        evaluate(approach, QUESTION_3, parameters)
-        evaluate(approach, QUESTION_4, parameters)
-        evaluate(approach, QUESTION_5, parameters)
+    
+    approach, parameters = APPROACHES["KALI"]
+    evaluate(approach, QUESTION_1, parameters)
+    evaluate(approach, QUESTION_2, parameters)
+    evaluate(approach, QUESTION_3, parameters)
+    evaluate(approach, QUESTION_4, parameters)
+    evaluate(approach, QUESTION_5, parameters)
  
     
 if __name__ == "__main__":

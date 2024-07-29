@@ -313,6 +313,10 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         Prepare the population for the next generation.
         """
+        if len(population) > self.population_size:
+            sorted_pop = sorted(population, key=lambda x : x.fitness, reverse=True)
+            new_pop = sorted_pop[0:self.population_size]
+            return new_pop
         return population
 
     def viable(self, population: Population) -> Population:
