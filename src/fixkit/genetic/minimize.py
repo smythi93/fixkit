@@ -91,7 +91,7 @@ class DDMutationMinimizer(MutationMinimizer):
                     candidate[: int(start)] + candidate[int(start + subset_length) :]
                 )
                 new_candidate = candidate.offspring(subset, change_gen=False)
-                self.fitness.evaluate(new_candidate)
+                self.fitness.evaluate([new_candidate])
                 if new_candidate.fitness >= candidate.fitness:
                     candidate = new_candidate
                     n = max(n - 1, 2)
