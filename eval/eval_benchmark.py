@@ -18,6 +18,7 @@ import argparse
 import time
 import random
 import numpy as np
+import ast
 
 REF_BENCHMARK = Path(__file__).parent / "refactory_benchmark"
 QUESTION_1 = REF_BENCHMARK / "question_1" #575
@@ -163,29 +164,34 @@ def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dic
                 out=REP,
                 **parameters
             )
+        try:
+            patches = repair.repair()
             
-        patches = repair.repair()
+            duration = time.time() - start
+        except Exception as ep:
+            path = os.path.join(Path(__file__).parent, f"{repair.__class__.__name__}_{question}.txt")
+            with open(path, "a") as f:
+                f.write(f"{repair.__class__.__name__},{number},{ep.__class__.__name__}\n")
+        else:
+            found = False
+            #Wieso macht das meine "patches" kaputt
+            #engine = Tests4PyEngine(AbsoluteFitness(set(), set()), workers=32, out="rep")
+            #engine.evaluate(patches)
+            max_fitness = 0.0
+            path = os.path.join(Path(__file__).parent, f"{repair.__class__.__name__}_{question}.txt")
+            for patch in patches:
+                if patch.fitness > max_fitness:
+                    max_fitness = patch.fitness
+                if almost_equal(patch.fitness, 1):
+                    found = True
+                    break        
+
             
-        duration = time.time() - start
-        #except Exception as ep:
-            #path = os.path.join(Path(__file__).parent, f"{repair.__class__.__name__}_{question}.txt")
-            #with open(path, "a") as f:
-                #f.write(f"{repair.__class__.__name__},{number},{ep.__class__.__name__}\n")
-        #else:
-        found = False
-        engine = Tests4PyEngine(AbsoluteFitness(set(), set()), workers=32, out="rep")
-        engine.evaluate(patches)
-        for patch in patches:
-            if almost_equal(patch.fitness, 1):
-                found = True
-                break
+            with open(path, "a") as f:
+                f.write(f"{repair.__class__.__name__},{number},Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
             
-        path = os.path.join(Path(__file__).parent, f"{repair.__class__.__name__}_{question}.txt")
-        with open(path, "a") as f:
-            f.write(f"{repair.__class__.__name__},{number},{found},{duration}\n")
-        
         shutil.rmtree(REP, ignore_errors=True)
-        
+            
         if(int(number) > 3):
             break
 
@@ -193,7 +199,7 @@ def main(args):
     random.seed(0)
     np.random.seed(0)
     
-    approach, parameters = APPROACHES["KALI"]
+    approach, parameters = APPROACHES["CARDUMEN"]
     evaluate(approach, QUESTION_1, parameters)
     evaluate(approach, QUESTION_2, parameters)
     evaluate(approach, QUESTION_3, parameters)
