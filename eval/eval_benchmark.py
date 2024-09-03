@@ -164,31 +164,30 @@ def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dic
                 out=REP,
                 **parameters
             )
-        try:
-            patches = repair.repair()
-            
-            duration = time.time() - start
-        except Exception as ep:
-            path = os.path.join(Path(__file__).parent, f"{repair.__class__.__name__}_{question}.txt")
-            with open(path, "a") as f:
-                f.write(f"{repair.__class__.__name__},{number},{ep.__class__.__name__}\n")
-        else:
-            found = False
-            #Wieso macht das meine "patches" kaputt
-            #engine = Tests4PyEngine(AbsoluteFitness(set(), set()), workers=32, out="rep")
-            #engine.evaluate(patches)
-            max_fitness = 0.0
-            path = os.path.join(Path(__file__).parent, f"{repair.__class__.__name__}_{question}.txt")
-            for patch in patches:
-                if patch.fitness > max_fitness:
-                    max_fitness = patch.fitness
-                if almost_equal(patch.fitness, 1):
-                    found = True
-                    break        
+    #try:
+        patches = repair.repair()            
+    #except Exception as ep:
+        #path = os.path.join(Path(__file__).parent, f"{repair.__class__.__name__}_{question}.txt")
+        #with open(path, "a") as f:
+            #f.write(f"{repair.__class__.__name__},{number},{ep.__class__.__name__}\n")
+    #else:
+        duration = time.time() - start
+        found = False
+        #Wieso macht das meine "patches" kaputt
+        #engine = Tests4PyEngine(AbsoluteFitness(set(), set()), workers=32, out="rep")
+        #engine.evaluate(patches)
+        max_fitness = 0.0
+        path = os.path.join(Path(__file__).parent, f"{repair.__class__.__name__}_{question}.txt")
+        for patch in patches:
+            if patch.fitness > max_fitness:
+                max_fitness = patch.fitness
+            if almost_equal(patch.fitness, 1):
+                found = True
+                break        
 
-            
-            with open(path, "a") as f:
-                f.write(f"{repair.__class__.__name__},{number},Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
+        
+        with open(path, "a") as f:
+            f.write(f"{repair.__class__.__name__},{number},Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
             
         shutil.rmtree(REP, ignore_errors=True)
             

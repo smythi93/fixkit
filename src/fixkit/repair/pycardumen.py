@@ -179,6 +179,7 @@ class PyCardumen(GeneticRepair):
         :return GeneticCandidate: The new mutated candidate.
         """
         candidate = selection.clone()
+        #Ist das richtig an jeder Stelle sind ja sozusagen mehrere Changes pro
         for location in self.suggestions:
             if self.should_mutate(location.weight):
                 collector = Scope_Constructor()
@@ -233,8 +234,11 @@ class PyCardumen(GeneticRepair):
         f.e.
         Template 5 Vars and 3 of these Var are in the Statement -> 3/5
         """
+        #Problem here what is when Stmt has no Vars than its always 0.0 and random.choice does not work
+        #Solution -> just random.choice without weighted
         collector = VarNamesCollector()
         collector.visit(statement)
+        stmt_str = ast.unparse(statement)
         var_in_statement = collector.vars
         weights = []
 
@@ -248,9 +252,15 @@ class PyCardumen(GeneticRepair):
                 if var in var_in_statement_copy:
                     count += 1
                     var_in_statement_copy.remove(var)
-            weights.append(count / len(var_in_template))
-
-        return random.choices(population=template_pool, weights=weights, k=1)[0]
+            try:
+                weights.append(count / len(var_in_template))
+            except ZeroDivisionError:
+                weights.append(0)
+        try:
+            return random.choices(population=template_pool, weights=weights, k=1)[0]
+        #wenn weights alle 0 sind dann ValueError alle 0 sind bei uns wenn stmt hat keine Variablen
+        except ValueError:
+            return random.choice(template_pool)
 
     @staticmethod
     def instance_template(
@@ -279,17 +289,22 @@ class PyCardumen(GeneticRepair):
         """
         Selects a Template Instance by random weighted choice.
         """
+        #TODO: DAS IST EIN QUICK AND DIRTY FIX das muss nochmal anders gehandlet werden
         probabilities = {}
         for instance in tmpl_instances:
-            probabilities[instance] = self.model.probabilities[
-                instance.combination.items
-            ]
+            try:
+                probabilities[instance] = self.model.probabilities[
+                    instance.combination.items
+                ]
+            except KeyError:
+                probabilities[instance] = 0
 
-        lucky_one = random.choices(
+        try:
+            return random.choices(
             list(probabilities.keys()), list(probabilities.values()), k=1
         )[0]
-
-        return lucky_one
+        except ValueError:
+            return random.choice(probabilities.keys())
 
 
 __all__ = ["PyCardumen"]
