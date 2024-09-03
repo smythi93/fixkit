@@ -41,7 +41,7 @@ APPROACHES = {
     "KALI": (
         PyKali,
         {
-            "max_generations": 10,
+            "max_generations": 1,
             "w_mut": 0.06,
             "workers": 32,
         },
@@ -49,7 +49,7 @@ APPROACHES = {
     "MUTREPAIR": (
         PyMutRepair,
         {
-            "max_generations": 10,
+            "max_generations": 1,
             "w_mut": 0.06,
             "workers": 32,
         },
@@ -136,6 +136,12 @@ def get_excludes(subject_path: Path):
 def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dict):
     subject_numbers = get_subject_numbers(question_path)
     for number in subject_numbers:
+        if(int(number) > 4):
+            break
+        
+        #if(int(number) != 4):
+            #continue
+
         subject_path = question_path / number
         test_files = get_test_files(subject_path)
         candidate_name = get_candidate_name(subject_path)
@@ -191,14 +197,13 @@ def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dic
             
         shutil.rmtree(REP, ignore_errors=True)
             
-        if(int(number) > 3):
-            break
+        
 
 def main(args):
     random.seed(0)
     np.random.seed(0)
     
-    approach, parameters = APPROACHES["CARDUMEN"]
+    approach, parameters = APPROACHES["MUTREPAIR"]
     evaluate(approach, QUESTION_1, parameters)
     evaluate(approach, QUESTION_2, parameters)
     evaluate(approach, QUESTION_3, parameters)
