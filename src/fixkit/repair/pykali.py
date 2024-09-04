@@ -24,7 +24,7 @@ from fixkit.localization import Localization
 from fixkit.localization.location import WeightedLocation
 from fixkit.repair.repair import GeneticRepair
 from fixkit.search.search import SearchStrategy, ExhaustiveStrategy
-
+from fixkit.genetic.minimize import MutationMinimizer
 
 class PyKali(GeneticRepair):
     """
@@ -45,6 +45,7 @@ class PyKali(GeneticRepair):
         is_t4p: bool = False,
         line_mode: bool = False,
         excludes: Optional[List[str]] = None,
+        minimizer: Optional[MutationMinimizer] = None,
     ):
         """
         Initialize the Kali repair.
@@ -80,7 +81,7 @@ class PyKali(GeneticRepair):
             ],
             selection=selection or UniversalSelection(),
             crossover_operator=OnePointCrossover(),
-            minimizer=DDMutationMinimizer(),
+            minimizer=minimizer or DDMutationMinimizer(),
             workers=workers,
             out=out,
             is_t4p=is_t4p,
@@ -116,6 +117,7 @@ class PyKali(GeneticRepair):
         w_neg_t: float = 10,
         is_t4p: bool = False,
         line_mode: bool = False,
+        minimizer: Optional[MutationMinimizer] = None,
     ) -> "PyKali":
         """
         Create a Kali repair from the source.
@@ -143,7 +145,8 @@ class PyKali(GeneticRepair):
             w_neg_t=w_neg_t,
             is_t4p=is_t4p,
             line_mode=line_mode,
-            excludes=excludes
+            excludes=excludes,
+            minimizer=minimizer,
         )
 
     def localize(self) -> List[WeightedLocation]:

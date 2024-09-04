@@ -9,6 +9,7 @@ from fixkit.repair.pymutrepair import PyMutRepair
 from fixkit.localization.coverage import CoverageLocalization
 from fixkit.fitness.engine import Tests4PyEngine
 from fixkit.fitness.metric import AbsoluteFitness
+from fixkit.genetic.minimize import DefaultMutationMinimizer
 
 import shutil
 import re
@@ -168,6 +169,7 @@ def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dic
                 excludes=excludes,
                 localization=localization,
                 out=REP,
+                minimizer=DefaultMutationMinimizer(),
                 **parameters
             )
     #try:
@@ -193,7 +195,7 @@ def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dic
 
         
         with open(path, "a") as f:
-            f.write(f"{repair.__class__.__name__},{number},Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
+            f.write(f"{repair.__class__.__name__},{number}, Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
             
         shutil.rmtree(REP, ignore_errors=True)
             
@@ -203,13 +205,12 @@ def main(args):
     random.seed(0)
     np.random.seed(0)
     
-    approach, parameters = APPROACHES["MUTREPAIR"]
+    approach, parameters = APPROACHES["CARDUMEN"]
     evaluate(approach, QUESTION_1, parameters)
-    evaluate(approach, QUESTION_2, parameters)
-    evaluate(approach, QUESTION_3, parameters)
-    evaluate(approach, QUESTION_4, parameters)
-    evaluate(approach, QUESTION_5, parameters)
- 
+    #evaluate(approach, QUESTION_2, parameters)
+    #evaluate(approach, QUESTION_3, parameters)
+    #evaluate(approach, QUESTION_4, parameters)
+    #evaluate(approach, QUESTION_5, parameters)
     
 if __name__ == "__main__":
     import sys

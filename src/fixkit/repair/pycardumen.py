@@ -27,7 +27,7 @@ from fixkit.localization import Localization
 from fixkit.localization.location import WeightedLocation
 from fixkit.logger import info_logger
 from fixkit.repair.repair import GeneticRepair
-
+from fixkit.genetic.minimize import MutationMinimizer
 
 class PyCardumen(GeneticRepair):
     """
@@ -49,6 +49,7 @@ class PyCardumen(GeneticRepair):
         is_t4p: bool = False,
         excludes: Optional[List[str]] = None,
         line_mode: bool = False,
+        minimizer: Optional[MutationMinimizer] = None,
     ):
         """
         Initialize the Cardumen repair.
@@ -74,7 +75,7 @@ class PyCardumen(GeneticRepair):
             operators=[ReplaceCardumen],
             selection=selection or UniversalSelection(),
             crossover_operator=OnePointCrossover(),
-            minimizer=DDMutationMinimizer(),
+            minimizer=minimizer or DDMutationMinimizer(),
             workers=workers,
             out=out,
             is_t4p=is_t4p,
@@ -128,6 +129,7 @@ class PyCardumen(GeneticRepair):
         w_neg_t: float = 10,
         is_t4p: bool = False,
         line_mode: bool = False,
+        minimizer: Optional[MutationMinimizer] = None,
     ) -> "PyCardumen":
         """
         Create a Cardumen repair from the source.
@@ -158,6 +160,7 @@ class PyCardumen(GeneticRepair):
             is_t4p=is_t4p,
             excludes=excludes,
             line_mode=line_mode,
+            minimizer=minimizer
         )
 
     def localize(self) -> List[WeightedLocation]:

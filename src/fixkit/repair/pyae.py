@@ -23,7 +23,6 @@ from fixkit.localization.normalization import normalize
 from fixkit.logger import LOGGER
 from fixkit.repair.repair import GeneticRepair
 
-
 class AbstractAE(GeneticRepair, abc.ABC):
     def __init__(
         self,

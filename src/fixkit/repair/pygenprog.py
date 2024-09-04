@@ -15,8 +15,7 @@ from fixkit.localization import Localization
 from fixkit.localization.location import WeightedLocation
 from fixkit.repair.repair import GeneticRepair
 from fixkit.genetic.selection import UniversalSelection, Selection
-
-
+from fixkit.genetic.minimize import MutationMinimizer
 class PyGenProg(GeneticRepair):
     """
     Class for repairing a fault using GenProg.
@@ -39,6 +38,7 @@ class PyGenProg(GeneticRepair):
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
         excludes: Optional[List[str]] = None,
+        minimizer: Optional[MutationMinimizer] = None,
     ):
         """
         Initialize the GenProg repair.
@@ -64,7 +64,7 @@ class PyGenProg(GeneticRepair):
             operators=[Delete, InsertBoth, Replace],
             selection=selection or UniversalSelection(),
             crossover_operator=OnePointCrossover(),
-            minimizer=DDMutationMinimizer(),
+            minimizer=minimizer or DDMutationMinimizer(),
             workers=workers,
             out=out,
             is_t4p=is_t4p,
@@ -105,6 +105,7 @@ class PyGenProg(GeneticRepair):
         is_system_test: bool = False,
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
+        minimizer: Optional[MutationMinimizer] = None,
     ) -> "PyGenProg":
         """
         Create a GenProg repair from the source.
@@ -137,6 +138,7 @@ class PyGenProg(GeneticRepair):
             system_tests=system_tests,
             line_mode=line_mode,
             excludes=excludes,
+            minimizer=minimizer,
         )
 
     def localize(self) -> List[WeightedLocation]:
@@ -191,6 +193,7 @@ class SingleMutationPyGenProg(PyGenProg):
         is_system_test: bool = False,
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
+        minimizer: Optional[MutationMinimizer]= None,
     ) -> "SingleMutationPyGenProg":
         """
         Create a GenProg repair from the source.
@@ -223,6 +226,7 @@ class SingleMutationPyGenProg(PyGenProg):
             system_tests=system_tests,
             line_mode=line_mode,
             excludes=excludes,
+            minimizer=minimizer,
         )
 
 
