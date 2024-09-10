@@ -32,10 +32,10 @@ def normalize(weighted_locations: List[Weighted]):
         minimum = 0
     for w in weighted_locations:
         #TODO: Marius besprechen
-        try:
-            w.weight = (w.weight - minimum) / maximum
-        except ZeroDivisionError:
-            w.weight = 0.0
+        #try:
+        w.weight = (w.weight - minimum) / maximum
+        #except ZeroDivisionError:
+        #    w.weight = 0.0
 
 
 __all__ = ["absolute_normalize", "normalize"]

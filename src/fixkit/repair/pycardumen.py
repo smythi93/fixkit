@@ -182,24 +182,42 @@ class PyCardumen(GeneticRepair):
         :return GeneticCandidate: The new mutated candidate.
         """
         candidate = selection.clone()
-        #Ist das richtig an jeder Stelle sind ja sozusagen mehrere Changes pro
-        for location in self.suggestions:
-            if self.should_mutate(location.weight):
-                collector = Scope_Constructor()
-                for tree in candidate.trees.values():
-                    collector.search(tree)
-                scope_stmt = collector.scope_stmt
-                statement = candidate.statements[location.identifier]
-                file = self.statement_finder.files[location.identifier]
-                tmpl_pool = self.filter_template_pool("local", file, statement)
-                tmpl = self.selecting_template(tmpl_pool, statement)
-                tmpl_instances = self.instance_template(tmpl, statement, scope_stmt)
-                tmpl_instance = self.selecting_template_instance(tmpl_instances)
+        #Original Cardumen takes the first X statements with a suspicious greater than a given threshold and terminates on TIME
+        #we do a weighted random selection of the locations and terminate after max count of generation and mutate one single location every generation
+        location = random.choices(population=self.suggestions, weights=[location.weight for location in self.suggestions])[0]
+        
+        collector = Scope_Constructor()
+        for tree in candidate.trees.values():
+            collector.search(tree)
+        scope_stmt = collector.scope_stmt
+        #statement corresponding to our suspicious location
+        statement = candidate.statements[location.identifier]
+        file = self.statement_finder.files[location.identifier]
+        #TODO: Templates ohne Variablen rausschmeißen
+        tmpl_pool = self.filter_template_pool("local", file, statement)
+        tmpl = self.selecting_template(tmpl_pool, statement)
+        
+        #TODO: wir wollen jetzt erst die combination durch das probability model aussuchen
+        #dafür brauchen wir alle probs welche combinationen repräsentieren 
+        # welche gleiche anzahl haben wie placeholder in tmpl
+        #und dann NUR EINE INSTANZ erstellen
+        probabilities = self.model.filter_by_number_of_items(tmpl.count_placeholder)
+        combination = random.choices(
+            list(probabilities.keys()), list(probabilities.values()), k=1
+        )[0]
 
-                candidate.mutations.append(
-                    ReplaceCardumen(location.identifier, tmpl_instance)
-                )
+        generator = TemplateInstanceGenerator(tmpl)
+        tmpl_instance = generator.construct_one_combination(combination)
+        #tmpl_instances = self.instance_template(tmpl, statement, scope_stmt)
+
+        #tmpl_instance = self.selecting_template_instance(tmpl_instances)
+
+        candidate.mutations.append(
+            ReplaceCardumen(location.identifier, tmpl_instance)
+            )
+        
         return [candidate]
+
 
     def filter_template_pool(
         self, location: str, file: str, statement: ast.AST, code_type_mode: bool = False
@@ -241,7 +259,6 @@ class PyCardumen(GeneticRepair):
         #Solution -> just random.choice without weighted
         collector = VarNamesCollector()
         collector.visit(statement)
-        stmt_str = ast.unparse(statement)
         var_in_statement = collector.vars
         weights = []
 

@@ -77,6 +77,7 @@ class TemplateInstanceGenerator():
         placeholder = 2
         templates -> (1,1) (1,2) (1,3) (2,1) (2,2) (2,3) (3,1) (3,2) (3,3)
         """
+
         combinations = product(vars, repeat=self.template.count_placeholder)
         tmpl_instances = list()
         for combination_it in combinations:
@@ -89,6 +90,16 @@ class TemplateInstanceGenerator():
             tmpl_instances.append(tmpl_instance)
         
         return tmpl_instances
+
+    def construct_one_combination(self, comb: Iterable):
+        combination = Combination(comb)
+        new_mapping = self.create_Mapping(combination)
+        transformer = TemplateTransformer(new_mapping)
+        stmt_copy = deepcopy(self.template.statement)
+        new_tree = transformer.visit(stmt_copy)
+        tmpl_instance = TemplateInstance(self.template, new_tree, combination, new_mapping)
+
+        return tmpl_instance
 
 class VarNamesCollector(ast.NodeVisitor):
     """
@@ -156,6 +167,14 @@ class ProbabilisticModel:
                 same_number_of_vars+=1
         
         return (same_combination, same_number_of_vars)
+    
+    def filter_by_number_of_items(self, n: int) -> Dict[Tuple[str, ...], float]:
+        """
+        Filters the probabilities dictionary to return only those combinations
+        that have exactly n variables.
+        """
+        filtered = {comb:prob for comb, prob in self.probabilities.items() if len(comb) == n}
+        return filtered
 
 class Scope():
     def __init__(self):
