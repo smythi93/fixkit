@@ -86,8 +86,8 @@ class PyCardumen(GeneticRepair):
         self.template_pool: List[Template] = list()
         statements = self.initial_candidate.statements
         files = self.statement_finder.files
-        for id_ in statements:
-            self.template_pool.append(Template(statements[id_], files[id_]))
+        for id in statements:
+            self.template_pool.append(Template(statements[id], files[id]))
 
         collector = Scope_Constructor()
         # the trees of all the files of the program to be repaired

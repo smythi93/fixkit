@@ -1,6 +1,6 @@
 import ast
 
-from typing import List, Dict, Tuple, Iterable
+from typing import List, Dict, Tuple, Iterable, Set
 from itertools import product, combinations_with_replacement
 from copy import deepcopy
 from multiset import FrozenMultiset
@@ -42,7 +42,7 @@ class TemplateTransformer(ast.NodeTransformer):
         new_arg = self.mapping[node.arg]
         return ast.arg(arg=new_arg, annotation=node.annotation, type_comment=node.type_comment)
 
-class Combination:
+class   Combination:
     def __init__(self, items: Iterable):
         self.items = FrozenMultiset(items)
 
@@ -135,10 +135,8 @@ class ProbabilisticModel:
 
     def createModel(self) -> None:
         for statement in self.statements.values():
-            collector = VarNamesCollector()
-            collector.visit(statement)
-            vars = collector.vars
-            for i in range(1, len(vars)+1):
+            vars = self.getVarsInStatement(statement)
+            for i in range(0, len(vars)+1):
                 for combination_it in combinations_with_replacement(vars, i):
                     combination = Combination(combination_it)
                     if combination not in self.probabilities.keys():
@@ -148,6 +146,12 @@ class ProbabilisticModel:
                         except ZeroDivisionError:
                             probability = 0.0
                         self.probabilities[combination.items] = probability
+    
+    def getVarsInStatement(self, statement: ast.AST) -> Set:
+        collector = VarNamesCollector()
+        collector.visit(statement)
+        return collector.vars
+
 
     def checkCombination(self, combination: Combination) -> Tuple[int, int]:
         """
