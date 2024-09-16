@@ -14,7 +14,6 @@ from fixkit.genetic.minimize import DefaultMutationMinimizer
 import shutil
 import re
 import os
-import re
 import argparse
 import time
 import random
@@ -78,19 +77,7 @@ def parse_args(args) -> Tuple[Type[GeneticRepair], Dict[str, Any]]:
         required=True,
         dest="approach",
     )
-    parser.add_argument(
-        "-s",
-        help="The subject to evaluate.",
-        required=True,
-        dest="subject",
-    )
-    parser.add_argument(
-        "-i",
-        help="The bug id to evaluate.",
-        required=True,
-        type=int,
-        dest="bug_id",
-    )
+    
     args = parser.parse_args(args)
     return APPROACHES[args.approach.upper()]
 
@@ -137,12 +124,6 @@ def get_excludes(subject_path: Path):
 def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dict):
     subject_numbers = get_subject_numbers(question_path)
     for number in subject_numbers:
-        if(int(number) > 4):
-            break
-        
-        #if(int(number) != 4):
-            #continue
-
         subject_path = question_path / number
         test_files = get_test_files(subject_path)
         candidate_name = get_candidate_name(subject_path)
@@ -204,14 +185,15 @@ def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dic
 def main(args):
     random.seed(0)
     np.random.seed(0)
-    
-    approach, parameters = APPROACHES["CARDUMEN"]
+
+
+    approach, parameters = parse_args(args)
     evaluate(approach, QUESTION_1, parameters)
-    #evaluate(approach, QUESTION_2, parameters)
-    #evaluate(approach, QUESTION_3, parameters)
-    #evaluate(approach, QUESTION_4, parameters)
-    #evaluate(approach, QUESTION_5, parameters)
-    
+    evaluate(approach, QUESTION_2, parameters)
+    evaluate(approach, QUESTION_3, parameters)
+    evaluate(approach, QUESTION_4, parameters)
+    evaluate(approach, QUESTION_5, parameters)
+
 if __name__ == "__main__":
     import sys
     main(sys.argv[1:])
