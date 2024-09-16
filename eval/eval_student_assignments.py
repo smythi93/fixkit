@@ -121,9 +121,11 @@ def get_excludes(subject_path: Path):
 
     return excludes
     
-def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dict):
+def evaluate(appraoch: Type[GeneticRepair], question_path: Path, parameters: Dict, checkpoint: int):
     subject_numbers = get_subject_numbers(question_path)
     for number in subject_numbers:
+        if int(number) <= checkpoint:
+            continue
         subject_path = question_path / number
         test_files = get_test_files(subject_path)
         candidate_name = get_candidate_name(subject_path)
@@ -187,8 +189,8 @@ def main(args):
     np.random.seed(0)
 
 
-    approach, parameters = parse_args(args)
-    evaluate(approach, QUESTION_1, parameters)
+    approach, parameters = APPROACHES["CARDUMEN"]
+    evaluate(approach, QUESTION_1, parameters, 31)
     evaluate(approach, QUESTION_2, parameters)
     evaluate(approach, QUESTION_3, parameters)
     evaluate(approach, QUESTION_4, parameters)
