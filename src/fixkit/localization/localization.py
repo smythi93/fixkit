@@ -29,6 +29,7 @@ class Localization(abc.ABC):
     def __init__(
         self,
         src: os.PathLike,
+        timeout: Optional[int] = None,
         failing: Optional[List[str]] = None,
         passing: Optional[List[str]] = None,
         tests: Optional[List[str]] = None,
@@ -47,6 +48,7 @@ class Localization(abc.ABC):
         :param Optional[str] metric: The metric to use for the localization.
         """
         self.src = Path(src) if src else None
+        self.timeout = timeout
         self.failing = set(failing or [])
         self.passing = set(passing or [])
         self.tests = set(tests or [])

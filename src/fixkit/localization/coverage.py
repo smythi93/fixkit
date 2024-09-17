@@ -14,6 +14,8 @@ from sflkit.analysis.spectra import Spectrum
 from fixkit.localization.localization import Localization
 from fixkit.localization.location import WeightedLocation
 
+from fixkit.logger import LOGGER
+
 
 # Regular expression for parsing the context of a coverage line.
 CONTEXT_PATTERN = re.compile(r"(?P<test>[^|]+)\|run")
@@ -28,6 +30,7 @@ class CoverageLocalization(Localization):
         self,
         src: os.PathLike,
         cov: str,
+        timeout: Optional[int] = 0,
         failing: Optional[List[str]] = None,
         passing: Optional[List[str]] = None,
         tests: Optional[List[str]] = None,
@@ -46,7 +49,7 @@ class CoverageLocalization(Localization):
         :param Optional[Dict[str, str]] env: The environment to run the tests in.
         :param Optional[str] metric: The metric to use for the localization.
         """
-        super().__init__(src, failing, passing, tests, out, env, metric)
+        super().__init__(src, timeout, failing, passing, tests, out, env, metric)
         self.cov = cov
         self.spectra = list()
 
@@ -59,24 +62,29 @@ class CoverageLocalization(Localization):
         passing_failing = (self.passing or set()) | (self.failing or set())
         tests = list(passing_failing or self.tests or {"tests"})
         # Run the tests and collect the coverage data.
-        subprocess.run(
-            [
-                "python",
-                "-m",
-                "pytest",
-                f"--rootdir={self.out}",
-                "--cov",
-                self.cov,
-                "--cov-context",
-                "test",
-                "--json-report",
-            ]
-            + tests,
-            cwd=self.out,
-            env=self.env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+        try:
+            subprocess.run(
+                [
+                    "python",
+                    "-m",
+                    "pytest",
+                    f"--rootdir={self.out}",
+                    "--cov",
+                    self.cov,
+                    "--cov-context",
+                    "test",
+                    "--json-report",
+                ]
+                + tests,
+                timeout=self.timeout,
+                cwd=self.out,
+                env=self.env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except subprocess.TimeoutExpired as e:
+            LOGGER.info("testcases timeout expired.")
+            
         # Parse the coverage data into a list of passing and failing spectra.
         self.passing = set()
         self.failing = set()

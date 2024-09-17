@@ -166,6 +166,7 @@ class EvalRunner:
 
             localization = CoverageLocalization(
                     src=self.subject_path,
+                    timeout=60,
                     cov=candidate_name,
                     tests=test_files,
                     metric="Ochiai",
@@ -217,7 +218,6 @@ def main(args):
         for question in QUESTIONS:
             runner = EvalRunner(approach, question, OUTPUT)
             runner.evaluate(parameters)
-            EvalRunner(approach, question, OUTPUT).evaluate(parameters)
 
 
     
