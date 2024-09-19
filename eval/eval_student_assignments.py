@@ -16,6 +16,8 @@ import argparse
 import time
 import random
 import numpy as np
+import signal
+from contextlib import contextmanager
 
 REF_BENCHMARK = Path(__file__).parent / "refactory_benchmark"
 QUESTION_1 = REF_BENCHMARK / "question_1" #575
@@ -80,6 +82,21 @@ def parse_args(args) -> Tuple[Type[GeneticRepair], Dict[str, Any]]:
 def almost_equal(value, target, delta=0.0001):
     return abs(value - target) < delta
 
+class TimeoutException(Exception): pass
+
+@contextmanager
+def time_limit(seconds):
+    def signal_handler(signum, frame):
+        raise TimeoutException("Timed out")
+    signal.signal(signal.SIGALRM, signal_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+
+
+
 class EvalRunner:
     def __init__(self, approach, input_path, output_path) -> None:
         self.approach = approach
@@ -93,11 +110,11 @@ class EvalRunner:
             with open(self.output_file) as file:
                 lines = file.readlines()
                 number_pattern = re.compile('\d\d\d')
-                match = number_pattern.search(lines[-1])
-                if match:
-                    return int(match.group())
-                else:
-                    print("problem")
+                #Sucht die letzte Line mit Zahl -> falls letzte Line Fehlermeldung ist
+                for line in lines.reverse():
+                    match = number_pattern.search(line)
+                    if match:
+                        return int(match.group())
         else:
             return 0
 
@@ -163,26 +180,27 @@ class EvalRunner:
 
             
             start = time.time()
-
-            localization = CoverageLocalization(
-                    src=self.subject_path,
-                    timeout=60,
-                    cov=candidate_name,
-                    tests=test_files,
-                    metric="Ochiai",
-                    out=REP
-                )
-
-            repair = self.approach.from_source(
-                    src=self.subject_path,
-                    excludes=excludes,
-                    localization=localization,
-                    out=REP,
-                    minimizer=DefaultMutationMinimizer(),
-                    **parameters
-                )
             try:
-                patches = repair.repair()            
+                with time_limit(1800):
+                    localization = CoverageLocalization(
+                        src=self.subject_path,
+                        timeout=60,
+                        cov=candidate_name,
+                        tests=test_files,
+                        metric="Ochiai",
+                        out=REP
+                    )
+                
+                    repair = self.approach.from_source(
+                        src=self.subject_path,
+                        excludes=excludes,
+                        localization=localization,
+                        out=REP,
+                        minimizer=DefaultMutationMinimizer(),
+                        **parameters
+                    )
+                
+                    patches = repair.repair()
             except Exception as ep:
                 with open(self.output_file, "a") as f:
                     f.write(f"{repair.__class__.__name__},{number},{ep.__class__.__name__}\n")
@@ -212,7 +230,6 @@ def main(args):
     random.seed(0)
     np.random.seed(0)
     
-
     for item in APPROACHES:
         approach, parameters = APPROACHES[item]
         for question in QUESTIONS:
