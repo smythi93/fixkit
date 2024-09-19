@@ -109,9 +109,10 @@ class EvalRunner:
         if os.path.exists(self.output_file):
             with open(self.output_file) as file:
                 lines = file.readlines()
+                lines.reverse()
                 number_pattern = re.compile('\d\d\d')
                 #Sucht die letzte Line mit Zahl -> falls letzte Line Fehlermeldung ist
-                for line in lines.reverse():
+                for line in lines:
                     match = number_pattern.search(line)
                     if match:
                         return int(match.group())
