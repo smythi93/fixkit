@@ -225,20 +225,80 @@ class EvalRunner:
                 
             shutil.rmtree(REP, ignore_errors=True)
             
-        
+    def evaluate_debug(self, parameters: Dict, subject_number):
+        self.subject_path = self.input_path / subject_number
+        test_files = self.get_test_files()
+        candidate_name = self.get_candidate_name()
+        excludes = self.get_excludes()
 
-def main(args):
-    random.seed(0)
-    np.random.seed(0)
-    
+        #used for the txt write later on
+        question = self.get_question()
+
+        
+        start = time.time()
+        try:
+            with time_limit(1800):
+                localization = CoverageLocalization(
+                    src=self.subject_path,
+                    timeout=60,
+                    cov=candidate_name,
+                    tests=test_files,
+                    metric="Ochiai",
+                    out=REP
+                )
+            
+                repair = self.approach.from_source(
+                    src=self.subject_path,
+                    excludes=excludes,
+                    localization=localization,
+                    out=REP,
+                    minimizer=DefaultMutationMinimizer(),
+                    **parameters
+                )
+            
+                patches = repair.repair()
+        except Exception as ep:
+            with open(self.output_file, "a") as f:
+                f.write(f"{repair.__class__.__name__},{subject_number},{ep.__class__.__name__}\n")
+        else:
+            duration = time.time() - start
+            found = False
+            #Wieso macht das meine "patches" kaputt
+            #engine = Tests4PyEngine(AbsoluteFitness(set(), set()), workers=32, out="rep")
+            #engine.evaluate(patches)
+            max_fitness = 0.0
+            for patch in patches:
+                if patch.fitness > max_fitness:
+                    max_fitness = patch.fitness
+                if almost_equal(patch.fitness, 1):
+                    found = True
+                    break        
+
+            
+            with open(self.output_file, "a") as f:
+                f.write(f"{repair.__class__.__name__},{subject_number}, Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
+            
+        shutil.rmtree(REP, ignore_errors=True)
+def run():
     for item in APPROACHES:
         approach, parameters = APPROACHES[item]
         for question in QUESTIONS:
             runner = EvalRunner(approach, question, OUTPUT)
             runner.evaluate(parameters)
 
+def debug(approach, parameters, question, subject_number):
+    runner = EvalRunner(approach, question, OUTPUT)
+    runner.evaluate_debug(parameters, subject_number)
 
-    
+def main(args):
+    random.seed(0)
+    np.random.seed(0)
+    approach, parameters = APPROACHES["GENPROG"]
+    question = QUESTION_1
+    subject_number = "354"
+    #run()
+    debug(approach, parameters,question, subject_number)
+
 if __name__ == "__main__":
     import sys
     main(sys.argv[1:])
