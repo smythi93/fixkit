@@ -22,6 +22,7 @@ from fixkit.localization.location import WeightedLocation
 from fixkit.localization.normalization import normalize
 from fixkit.logger import LOGGER
 from fixkit.repair.repair import GeneticRepair
+from fixkit.genetic.minimize import MutationMinimizer, DDMutationMinimizer
 
 class AbstractAE(GeneticRepair, abc.ABC):
     def __init__(
@@ -35,6 +36,7 @@ class AbstractAE(GeneticRepair, abc.ABC):
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
         excludes: Optional[List[str]] = None,
+        minimizer: Optional[MutationMinimizer] = None,
     ):
         self.metric = AbsoluteFitness(set(), set())
         self.k = k
@@ -48,7 +50,6 @@ class AbstractAE(GeneticRepair, abc.ABC):
             operators=[Delete, InsertAfter, InsertBefore],
             selection=None,
             crossover_operator=None,
-            minimizer=None,
             workers=1,
             out=out,
             is_t4p=is_t4p,
@@ -58,6 +59,7 @@ class AbstractAE(GeneticRepair, abc.ABC):
             w_mut=1,
             serial=True,
             excludes=excludes,
+            minimizer=minimizer or DDMutationMinimizer
         )
 
     @classmethod
@@ -153,6 +155,7 @@ class PyAE(AbstractAE):
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
         excludes: Optional[List[str]] = None,
+        minimizer: Optional[MutationMinimizer] = None,
     ):
         super().__init__(
             src=src,
@@ -164,6 +167,7 @@ class PyAE(AbstractAE):
             system_tests=system_tests,
             line_mode=line_mode,
             excludes=excludes,
+            minimizer=minimizer or DDMutationMinimizer,
         )
         self.dataflow_analysis = DataflowAnalysis()
 
@@ -283,6 +287,7 @@ class PyAE(AbstractAE):
         is_system_test: bool = False,
         system_tests: Optional[os.PathLike | List[os.PathLike]] = None,
         line_mode: bool = False,
+        minimizer: Optional[MutationMinimizer] = None,
     ) -> GeneticRepair:
         return PyAE(
             src=src,
@@ -294,4 +299,5 @@ class PyAE(AbstractAE):
             system_tests=system_tests,
             line_mode=line_mode,
             excludes=excludes,
+            minimizer=minimizer or DDMutationMinimizer,
         )
