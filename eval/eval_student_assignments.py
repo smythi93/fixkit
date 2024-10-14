@@ -25,12 +25,15 @@ QUESTION_2 = REF_BENCHMARK / "question_2" #435
 QUESTION_3 = REF_BENCHMARK / "question_3" #308
 QUESTION_4 = REF_BENCHMARK / "question_4" #357
 QUESTION_5 = REF_BENCHMARK / "question_5" #108
-QUESTIONS = [QUESTION_1, QUESTION_2, QUESTION_3, QUESTION_4, QUESTION_5]
+
 OUTPUT = Path(__file__).parent / "results"
 REP = Path(__file__).parent / "rep"
+
+QUESTIONS = [QUESTION_1, QUESTION_2, QUESTION_3, QUESTION_4, QUESTION_5]
 SEEDS = [7133,883,6465,7235,3735,5197,2570,3405,2155,9753,8013,3798,5637,
          7770,6056,2419,6841,1343,6924,9419,5416,6002,6862,5442,2971,1157,
          2225,1940,9408,6346]
+
 APPROACHES = {
     "GENPROG": (
         PyGenProg,
@@ -104,8 +107,6 @@ def time_limit(seconds):
     finally:
         signal.alarm(0)
 
-
-
 class EvalRunner:
     def __init__(self, approach, input_path, output_path, seed) -> None:
         self.approach = approach
@@ -121,7 +122,7 @@ class EvalRunner:
             with open(self.output_file) as file:
                 lines = file.readlines()
                 lines.reverse()
-                number_pattern = re.compile('\d\d\d')
+                number_pattern = re.compile(r'\d\d\d')
                 #Sucht die letzte Line mit Zahl -> falls letzte Line Fehlermeldung ist
                 for line in lines:
                     match = number_pattern.search(line)
@@ -132,7 +133,7 @@ class EvalRunner:
 
     def get_subject_numbers(self) -> List[str]:
         files = os.listdir(self.input_path)
-        number_pattern = re.compile('\d\d\d')
+        number_pattern = re.compile(r'\d\d\d')
         files = [s for s in files if number_pattern.match(s)]
         files.sort()
         
@@ -140,7 +141,7 @@ class EvalRunner:
 
     def get_test_files(self) -> List[str]:
         files = os.listdir(self.subject_path)
-        test_pattern = re.compile('test_.*\.py')
+        test_pattern = re.compile(r'test_.*\.py')
         test_files = [s for s in files if test_pattern.match(s)]
 
         return test_files
@@ -288,7 +289,7 @@ class EvalRunner:
         shutil.rmtree(REP, ignore_errors=True)
 
 def run(approach, parameters, question):
-    for seed in SEEDS:
+    for seed in SEEDS:     
         runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT, seed=seed)
         runner.evaluate(parameters)
 
@@ -300,10 +301,10 @@ def debug(approach, parameters, question, subject_number, seed):
 def main(args):
     approach, question = parse_args(args)
     approach, parameters = approach
-    run(approach, parameters, question)
-    
     #approach, parameters = APPROACHES["GENPROG"]
     #question = QUESTION_1
+    run(approach, parameters, question)
+
     #subject_number = "434"
     #debug(approach, parameters, question, subject_number, 0)
 
