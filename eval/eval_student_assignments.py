@@ -1,4 +1,4 @@
-from typing import Tuple, Type, Dict, Any
+from typing import Tuple, Type, Dict, Any, List
 from pathlib import Path
 from fixkit.repair.repair import GeneticRepair
 from fixkit.repair.pyae import PyAE
@@ -28,7 +28,9 @@ QUESTION_5 = REF_BENCHMARK / "question_5" #108
 QUESTIONS = [QUESTION_1, QUESTION_2, QUESTION_3, QUESTION_4, QUESTION_5]
 OUTPUT = Path(__file__).parent / "results"
 REP = Path(__file__).parent / "rep"
-
+SEEDS = [7133,883,6465,7235,3735,5197,2570,3405,2155,9753,8013,3798,5637,
+         7770,6056,2419,6841,1343,6924,9419,5416,6002,6862,5442,2971,1157,
+         2225,1940,9408,6346]
 APPROACHES = {
     "GENPROG": (
         PyGenProg,
@@ -75,9 +77,16 @@ def parse_args(args) -> Tuple[Type[GeneticRepair], Dict[str, Any]]:
             required=True,
             dest="approach",
         )
+
+        parser.add_argument(
+            "-q",
+            help="The question to evaluate",
+            required=True,
+            dest="question",
+        )
         
         args = parser.parse_args(args)
-        return APPROACHES[args.approach.upper()]
+        return (APPROACHES[args.approach.upper()],QUESTIONS[int(args.question)])
 
 def almost_equal(value, target, delta=0.0001):
     return abs(value - target) < delta
@@ -98,14 +107,16 @@ def time_limit(seconds):
 
 
 class EvalRunner:
-    def __init__(self, approach, input_path, output_path) -> None:
+    def __init__(self, approach, input_path, output_path, seed) -> None:
         self.approach = approach
         self.input_path = input_path
         self.output_path = output_path
-        self.output_file = os.path.join(self.output_path, f"{approach.__name__}_{self.get_question()}.txt")
+        self.seed = seed
+        self.set_seed()
+        self.output_file = os.path.join(self.output_path, f"{approach.__name__}_{self.seed}_{self.get_question()}.txt")
         self.checkpoint = self.get_checkpoint()
 
-    def get_checkpoint(self):
+    def get_checkpoint(self) -> int:
         if os.path.exists(self.output_file):
             with open(self.output_file) as file:
                 lines = file.readlines()
@@ -119,7 +130,7 @@ class EvalRunner:
         else:
             return 0
 
-    def get_subject_numbers(self):
+    def get_subject_numbers(self) -> List[str]:
         files = os.listdir(self.input_path)
         number_pattern = re.compile('\d\d\d')
         files = [s for s in files if number_pattern.match(s)]
@@ -127,14 +138,14 @@ class EvalRunner:
         
         return files
 
-    def get_test_files(self):
+    def get_test_files(self) -> List[str]:
         files = os.listdir(self.subject_path)
         test_pattern = re.compile('test_.*\.py')
         test_files = [s for s in files if test_pattern.match(s)]
 
         return test_files
 
-    def get_candidate_name(self):
+    def get_candidate_name(self) -> str:
         files = os.listdir(self.subject_path)
         candidate_pattern = re.compile('wrong_._...')
         #it should not fail but what if it does not find a match we get indexerror
@@ -147,7 +158,7 @@ class EvalRunner:
 
         return candidate_name
 
-    def get_excludes(self):
+    def get_excludes(self) -> List[str]:
         #einfach alles dem path außer den candidate!
         files = os.listdir(self.subject_path)
         candidate_pattern = re.compile('wrong_._...')
@@ -159,14 +170,18 @@ class EvalRunner:
 
         return excludes
     
-    def get_question(self):
+    def get_question(self) -> str:
         question_pattern = re.compile('question_.')
         match = question_pattern.search(str(self.input_path))
         question = match.group()
 
         return question
 
-    def evaluate(self, parameters: Dict):
+    def set_seed(self) -> None:
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+    
+    def evaluate(self, parameters: Dict) -> None:
         subject_numbers = self.get_subject_numbers()
         for number in subject_numbers:
             if int(number) <= self.checkpoint:
@@ -175,10 +190,6 @@ class EvalRunner:
             test_files = self.get_test_files()
             candidate_name = self.get_candidate_name()
             excludes = self.get_excludes()
-
-            #used for the txt write later on
-            question = self.get_question()
-
             
             start = time.time()
             try:
@@ -231,16 +242,12 @@ class EvalRunner:
         candidate_name = self.get_candidate_name()
         excludes = self.get_excludes()
 
-        #used for the txt write later on
-        question = self.get_question()
-
-        
         start = time.time()
         try:
             with time_limit(1800):
                 localization = CoverageLocalization(
                     src=self.subject_path,
-                    timeout=20,
+                    timeout=60,
                     cov=candidate_name,
                     tests=test_files,
                     metric="Ochiai",
@@ -279,25 +286,26 @@ class EvalRunner:
                 f.write(f"{repair.__class__.__name__},{subject_number}, Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
             
         shutil.rmtree(REP, ignore_errors=True)
-def run():
-    for item in APPROACHES:
-        approach, parameters = APPROACHES[item]
-        for question in QUESTIONS:
-            runner = EvalRunner(approach, question, OUTPUT)
-            runner.evaluate(parameters)
 
-def debug(approach, parameters, question, subject_number):
-    runner = EvalRunner(approach, question, OUTPUT)
+def run(approach, parameters, question):
+    for seed in SEEDS:
+        runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT, seed=seed)
+        runner.evaluate(parameters)
+
+def debug(approach, parameters, question, subject_number, seed):
+    runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT, seed=seed)
     runner.evaluate_debug(parameters, subject_number)
 
+#needs to be called with -a and -q
 def main(args):
-    random.seed(0)
-    np.random.seed(0)
-    approach, parameters = APPROACHES["GENPROG"]
-    question = QUESTION_1
-    subject_number = "434"
-    #run()
-    debug(approach, parameters, question, subject_number)
+    approach, question = parse_args(args)
+    approach, parameters = approach
+    run(approach, parameters, question)
+    
+    #approach, parameters = APPROACHES["GENPROG"]
+    #question = QUESTION_1
+    #subject_number = "434"
+    #debug(approach, parameters, question, subject_number, 0)
 
 if __name__ == "__main__":
     import sys

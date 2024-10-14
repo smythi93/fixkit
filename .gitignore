@@ -164,4 +164,3 @@ sflkit_events/
 *.report.json
 tmp
 eval/results/
-eval/refactory_benchmark/
