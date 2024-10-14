@@ -296,7 +296,7 @@ def debug(approach, parameters, question, subject_number, seed):
     runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT, seed=seed)
     runner.evaluate_debug(parameters, subject_number)
 
-#needs to be called with -a and -q
+#needs to be called with -a and -q (0-4)
 def main(args):
     approach, question = parse_args(args)
     approach, parameters = approach
