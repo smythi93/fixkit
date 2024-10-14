@@ -1,7 +1,8 @@
 """
 The coverage module provides the necessary tools to localize a fault using coverage.py information.
 """
-
+import time
+import coverage
 import json
 import os
 import re
@@ -16,6 +17,8 @@ from fixkit.localization.location import WeightedLocation
 
 from fixkit.logger import LOGGER
 
+import signal
+from pytest_cov.embed import cleanup_on_sigterm
 
 # Regular expression for parsing the context of a coverage line.
 CONTEXT_PATTERN = re.compile(r"(?P<test>[^|]+)\|run")
@@ -62,8 +65,9 @@ class CoverageLocalization(Localization):
         passing_failing = (self.passing or set()) | (self.failing or set())
         tests = list(passing_failing or self.tests or {"tests"})
         # Run the tests and collect the coverage data.
+        
         try:
-            subprocess.run(
+            proc = subprocess.Popen(
                 [
                     "python",
                     "-m",
@@ -76,15 +80,18 @@ class CoverageLocalization(Localization):
                     "--json-report",
                 ]
                 + tests,
-                timeout=self.timeout,
                 cwd=self.out,
                 env=self.env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
+            proc.wait(self.timeout)
         except subprocess.TimeoutExpired as e:
+            proc.send_signal(signal.SIGINT)
+            proc.wait(timeout=5)
+            cleanup_on_sigterm()
             LOGGER.info("testcases timeout expired.")
-            
+            LOGGER.info(e)
         # Parse the coverage data into a list of passing and failing spectra.
         self.passing = set()
         self.failing = set()

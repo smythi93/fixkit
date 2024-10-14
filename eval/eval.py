@@ -147,7 +147,10 @@ def parse_args(args) -> Tuple[Tuple[Type[GeneticRepair], Dict[str, Any]], Projec
 
 
 def main(args):
-    approach, subject = parse_args(args)
+
+    #approach, subject = parse_args(args)
+    approach = APPROACHES["CARDUMEN"]
+    subject = SUBJECTS["EXPRESSION"][1]
     approach, parameters = approach
     found, duration = evaluate(approach, subject, parameters)
     with open(f"{approach.__name__}_{subject.get_identifier()}.txt", "w") as f:

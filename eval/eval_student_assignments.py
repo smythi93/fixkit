@@ -240,7 +240,7 @@ class EvalRunner:
             with time_limit(1800):
                 localization = CoverageLocalization(
                     src=self.subject_path,
-                    timeout=60,
+                    timeout=20,
                     cov=candidate_name,
                     tests=test_files,
                     metric="Ochiai",
@@ -295,9 +295,9 @@ def main(args):
     np.random.seed(0)
     approach, parameters = APPROACHES["GENPROG"]
     question = QUESTION_1
-    subject_number = "354"
+    subject_number = "434"
     #run()
-    debug(approach, parameters,question, subject_number)
+    debug(approach, parameters, question, subject_number)
 
 if __name__ == "__main__":
     import sys

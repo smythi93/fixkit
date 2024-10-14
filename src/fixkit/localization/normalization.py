@@ -26,13 +26,21 @@ def normalize(weighted_locations: List[Weighted]):
         max([w.weight for w in weighted_locations]),
         min([w.weight for w in weighted_locations]),
     )
+
+    #Das heißt wir setzen Minimum immer 0, wenn es größer als 0 ist??
+    #Hört sich unsinnig an
     if minimum < 0:
         maximum = maximum - minimum
     else:
         minimum = 0
+    
+    #Ansonsten ZeroDivisionError
+    if maximum == 0:
+        maximum = 1
+
     for w in weighted_locations:
-        #TODO: Marius besprechen
-        #try:
+        #TODO: Marius besprechen, das tritt auf wenn alle tests von anfang an passen
+        
         w.weight = (w.weight - minimum) / maximum
         #except ZeroDivisionError:
         #    w.weight = 0.0
