@@ -30,9 +30,9 @@ OUTPUT = Path(__file__).parent / "results"
 REP = Path(__file__).parent / "rep"
 
 QUESTIONS = [QUESTION_1, QUESTION_2, QUESTION_3, QUESTION_4, QUESTION_5]
-SEEDS = [7133,883,6465,7235,3735,5197,2570,3405,2155,9753,8013,3798,5637,
-         7770,6056,2419,6841,1343,6924,9419,5416,6002,6862,5442,2971,1157,
-         2225,1940,9408,6346]
+SEEDS_1 = [7133,883,6465,7235,3735,5197,2570,3405,2155,9753]
+SEEDS_2 = [8013,3798,5637,7770,6056,2419,6841,1343,6924,9419]
+SEEDS_3 = [5416,6002,6862,5442,2971,1157,2225,1940,9408,6346]
 
 APPROACHES = {
     "GENPROG": (
@@ -289,7 +289,7 @@ class EvalRunner:
         shutil.rmtree(REP, ignore_errors=True)
 
 def run(approach, parameters, question):
-    for seed in SEEDS:     
+    for seed in SEEDS_1:     
         runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT, seed=seed)
         runner.evaluate(parameters)
 
