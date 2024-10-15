@@ -69,7 +69,7 @@ APPROACHES = {
             "workers": 32,
         },
     ),
-    "AE": (PyAE, {"k": 1}),
+    #"AE": (PyAE, {"k": 1}),
 }
 
 def parse_args(args) -> Tuple[Type[GeneticRepair], Dict[str, Any]]:
@@ -299,8 +299,15 @@ def debug(approach, parameters, question, subject_number, seed):
 
 #needs to be called with -a and -q (0-4)
 def main(args):
-    approach, question = parse_args(args)
-    approach, parameters = approach
+
+    input_id = int(args[0])
+
+    approaches_input = ["GENPROG", "KALI", "MUTREPAIR", "CARDUMEN"]
+    approach, parameters = APPROACHES[approaches_input[input_id//5]]
+    question = QUESTIONS[input_id%5]
+
+    #approach, question = parse_args(args)
+    #approach, parameters = approach
     #approach, parameters = APPROACHES["GENPROG"]
     #question = QUESTION_1
     run(approach, parameters, question)
