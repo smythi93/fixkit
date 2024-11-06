@@ -4,6 +4,7 @@ import re
 import matplotlib
 import matplotlib.pyplot as plt
 import os
+import json
 
 QUESTION_1 = Path(__file__).parent / "results" / "question_1"
 QUESTION_2 = Path(__file__).parent / "results" / "question_2"
@@ -210,11 +211,13 @@ def main(args):
     subject = data[1]
     #print(subject.question, subject.approach, subject.seed)
     
-    repairs = found_repairs_question(data, 1)
-    print(repairs)
-    plot_repairs_found(repairs, 1)
-    #corrupted_data = find_corrupted_data(RESULTS)
-    #print(corrupted_data)
+    #repairs = found_repairs_question(data, 1)
+    #print(repairs)
+    #plot_repairs_found(repairs, 1)
+    corrupted_data = find_corrupted_data(RESULTS)
+    with open("eval/corrupted_data.json", "w") as f:
+        json.dump(corrupted_data, f)
+
 
 
 
