@@ -92,9 +92,17 @@ class CoverageLocalization(Localization):
             cleanup_on_sigterm()
             LOGGER.info("testcases timeout expired.")
             LOGGER.info(e)
+        except Exception as e:
+            LOGGER.info(e)
+        
         # Parse the coverage data into a list of passing and failing spectra.
         self.passing = set()
         self.failing = set()
+
+        #waits for the coverage report to be written to the disk
+        if not os.path.exists(self.out / ".report.json"):
+            time.sleep(2)
+
         with open(self.out / ".report.json") as fp:
             results = json.load(fp)
         for result in results["tests"]:

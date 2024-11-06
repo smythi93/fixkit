@@ -9,6 +9,8 @@ from fixkit.repair.pymutrepair import PyMutRepair
 from fixkit.localization.coverage import CoverageLocalization
 from fixkit.genetic.minimize import DefaultMutationMinimizer
 
+import itertools
+import traceback
 import shutil
 import re
 import os
@@ -19,6 +21,13 @@ import numpy as np
 import signal
 from contextlib import contextmanager
 
+#Settings 
+WORKERS = 1
+MAX_GENERATION = 10
+POPULATION_SIZE = 40
+W_MUT = 0.06
+
+#local
 REF_BENCHMARK = Path(__file__).parent / "refactory_benchmark"
 QUESTION_1 = REF_BENCHMARK / "question_1" #575
 QUESTION_2 = REF_BENCHMARK / "question_2" #435
@@ -30,43 +39,57 @@ OUTPUT = Path(__file__).parent / "results"
 REP = Path(__file__).parent / "rep"
 
 QUESTIONS = [QUESTION_1, QUESTION_2, QUESTION_3, QUESTION_4, QUESTION_5]
+
+#slurm gruenau
+REF_BENCHMARK_SLURM = Path("/vol/tmp/werkkai/fixkit/eval/refactory_benchmark")
+QUESTION_1_SLURM = REF_BENCHMARK_SLURM / "question_1" #575
+QUESTION_2_SLURM = REF_BENCHMARK_SLURM / "question_2" #435
+QUESTION_3_SLURM = REF_BENCHMARK_SLURM / "question_3" #308
+QUESTION_4_SLURM = REF_BENCHMARK_SLURM / "question_4" #357
+QUESTION_5_SLURM = REF_BENCHMARK_SLURM / "question_5" #108
+
+QUESTIONS_SLURM = [QUESTION_1_SLURM, QUESTION_2_SLURM, QUESTION_3_SLURM, QUESTION_4_SLURM, QUESTION_5_SLURM]
+
+OUTPUT_SLURM = Path("/vol/fob-vol5/nebenf22/werkkai/dev/fixkit/eval/results")
+REP_SLURM = Path(__file__).parent / "rep"
+
 SEEDS_1 = [7133,883,6465,7235,3735,5197,2570,3405,2155,9753]
-SEEDS_2 = [8013,3798,5637,7770,6056,2419,6841,1343,6924,9419]
+SEEDS_2 = [8013,3798,5637,7770,6056,2419,6841,1343,6924,0]
 SEEDS_3 = [5416,6002,6862,5442,2971,1157,2225,1940,9408,6346]
 
 APPROACHES = {
     "GENPROG": (
         PyGenProg,
         {
-            "population_size": 40,
-            "max_generations": 10,
-            "w_mut": 0.06,
-            "workers": 32,
+            "population_size": POPULATION_SIZE,
+            "max_generations": MAX_GENERATION,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
         },
     ),
     "KALI": (
         PyKali,
         {
             "max_generations": 1,
-            "w_mut": 0.06,
-            "workers": 32,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
         },
     ),
     "MUTREPAIR": (
         PyMutRepair,
         {
             "max_generations": 1,
-            "w_mut": 0.06,
-            "workers": 32,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
         },
     ),
     "CARDUMEN": (
         PyCardumen,
         {
-            "population_size": 40,
-            "max_generations": 10,
-            "w_mut": 0.06,
-            "workers": 32,
+            "population_size": POPULATION_SIZE,
+            "max_generations": MAX_GENERATION,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
         },
     ),
     #"AE": (PyAE, {"k": 1}),
@@ -108,18 +131,25 @@ def time_limit(seconds):
         signal.alarm(0)
 
 class EvalRunner:
-    def __init__(self, approach, input_path, output_path, seed) -> None:
+    def __init__(self, approach, input_path, output_path, seed, slurm=False) -> None:
         self.approach = approach
         self.input_path = input_path
         self.output_path = output_path
         self.seed = seed
         self.set_seed()
-        self.output_file = os.path.join(self.output_path, f"{approach.__name__}_{self.seed}_{self.get_question()}.txt")
-        self.checkpoint = self.get_checkpoint()
+        self.output_file = os.path.join(self.output_path, f"{approach.__name__}_{self.get_question()}_{self.seed}.txt")
+        #checkpoint where the evaluation stopped last time
+        self.checkpoint = self.get_checkpoint(self.output_file)
+        #Subjects are all the faulty programs for one question
+        self.subject_numbers = self.get_subject_numbers(self.input_path)
 
-    def get_checkpoint(self) -> int:
-        if os.path.exists(self.output_file):
-            with open(self.output_file) as file:
+    def set_seed(self) -> None:
+        random.seed(self.seed)
+        np.random.seed(self.seed)
+
+    def get_checkpoint(self, output_file: Path) -> int:
+        if os.path.exists(output_file):
+            with open(output_file) as file:
                 lines = file.readlines()
                 lines.reverse()
                 number_pattern = re.compile(r'\d\d\d')
@@ -131,23 +161,23 @@ class EvalRunner:
         else:
             return 0
 
-    def get_subject_numbers(self) -> List[str]:
-        files = os.listdir(self.input_path)
+    def get_subject_numbers(self, input_path: Path) -> List[str]:
+        files = os.listdir(input_path)
         number_pattern = re.compile(r'\d\d\d')
         files = [s for s in files if number_pattern.match(s)]
         files.sort()
         
         return files
 
-    def get_test_files(self) -> List[str]:
-        files = os.listdir(self.subject_path)
+    def get_test_files(self, subject_path: Path) -> List[str]:
+        files = os.listdir(subject_path)
         test_pattern = re.compile(r'test_.*\.py')
         test_files = [s for s in files if test_pattern.match(s)]
 
         return test_files
 
-    def get_candidate_name(self) -> str:
-        files = os.listdir(self.subject_path)
+    def get_candidate_name(self, subject_path: Path) -> str:
+        files = os.listdir(subject_path)
         candidate_pattern = re.compile('wrong_._...')
         #it should not fail but what if it does not find a match we get indexerror
         #try catch and then continue with next subject
@@ -159,9 +189,9 @@ class EvalRunner:
 
         return candidate_name
 
-    def get_excludes(self) -> List[str]:
+    def get_excludes(self, subject_path: Path) -> List[str]:
         #einfach alles dem path außer den candidate!
-        files = os.listdir(self.subject_path)
+        files = os.listdir(subject_path)
         candidate_pattern = re.compile('wrong_._...')
 
         #it should not fail but what if it does not find a match we get indexerror
@@ -177,26 +207,22 @@ class EvalRunner:
         question = match.group()
 
         return question
-
-    def set_seed(self) -> None:
-        random.seed(self.seed)
-        np.random.seed(self.seed)
     
     def evaluate(self, parameters: Dict) -> None:
-        subject_numbers = self.get_subject_numbers()
+        subject_numbers = self.get_subject_numbers(self.input_path)
         for number in subject_numbers:
             if int(number) <= self.checkpoint:
                 continue
-            self.subject_path = self.input_path / number
-            test_files = self.get_test_files()
-            candidate_name = self.get_candidate_name()
-            excludes = self.get_excludes()
+            subject_path = self.input_path / number
+            test_files = self.get_test_files(subject_path)
+            candidate_name = self.get_candidate_name(subject_path)
+            excludes = self.get_excludes(subject_path)
             
             start = time.time()
             try:
                 with time_limit(1800):
                     localization = CoverageLocalization(
-                        src=self.subject_path,
+                        src=subject_path,
                         timeout=60,
                         cov=candidate_name,
                         tests=test_files,
@@ -205,7 +231,7 @@ class EvalRunner:
                     )
                 
                     repair = self.approach.from_source(
-                        src=self.subject_path,
+                        src=subject_path,
                         excludes=excludes,
                         localization=localization,
                         out=REP,
@@ -217,6 +243,12 @@ class EvalRunner:
             except Exception as ep:
                 with open(self.output_file, "a") as f:
                     f.write(f"{repair.__class__.__name__},{number},{ep.__class__.__name__}\n")
+
+                err_file = os.path.join(self.output_path, f"{repair.__class__.__name__}_err.txt")
+                with open(err_file, "a") as f:
+                    f.write(f"{repair.__class__.__name__},{self.get_question()},{number},{self.seed},{ep.__class__.__name__}\n")
+                    traceback.TracebackException.from_exception(ep).print(file=f)
+
             else:
                 duration = time.time() - start
                 found = False
@@ -238,7 +270,7 @@ class EvalRunner:
             shutil.rmtree(REP, ignore_errors=True)
             
     def evaluate_debug(self, parameters: Dict, subject_number):
-        self.subject_path = self.input_path / subject_number
+        subject_path = self.input_path / subject_number
         test_files = self.get_test_files()
         candidate_name = self.get_candidate_name()
         excludes = self.get_excludes()
@@ -247,7 +279,7 @@ class EvalRunner:
         try:
             with time_limit(1800):
                 localization = CoverageLocalization(
-                    src=self.subject_path,
+                    src=subject_path,
                     timeout=60,
                     cov=candidate_name,
                     tests=test_files,
@@ -256,7 +288,7 @@ class EvalRunner:
                 )
             
                 repair = self.approach.from_source(
-                    src=self.subject_path,
+                    src=subject_path,
                     excludes=excludes,
                     localization=localization,
                     out=REP,
@@ -266,8 +298,15 @@ class EvalRunner:
             
                 patches = repair.repair()
         except Exception as ep:
-            with open(self.output_file, "a") as f:
-                f.write(f"{repair.__class__.__name__},{subject_number},{ep.__class__.__name__}\n")
+                with open(self.output_file, "a") as f:
+                    f.write(f"{repair.__class__.__name__},{subject_number},{ep.__class__.__name__}\n")
+                    traceback.TracebackException.from_exception(ep).print(file=f)
+                
+                err_file = os.path.join(self.output_path, f"{repair.__class__.__name__}_err.txt")
+                with open(err_file, "a") as f:
+                    f.write(f"{repair.__class__.__name__},{self.get_question()},{subject_number},{self.seed},{ep.__class__.__name__}\n")
+                    traceback.TracebackException.from_exception(ep).print(file=f)
+
         else:
             duration = time.time() - start
             found = False
@@ -288,32 +327,71 @@ class EvalRunner:
             
         shutil.rmtree(REP, ignore_errors=True)
 
-def run(approach, parameters, question):
+def run_local(approach, parameters, question):
     for seed in SEEDS_1:     
-        runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT, seed=seed)
+        runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT_SLURM, seed=seed)
         runner.evaluate(parameters)
 
-def debug(approach, parameters, question, subject_number, seed):
+def run_slurm(approach, parameters, question, seed):   
+    runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT_SLURM, seed=seed)
+    runner.evaluate(parameters)
+
+def run_slurm_old(approach, parameters, question, seed):
+    for seed in SEEDS_1:
+        runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT_SLURM, seed=seed)
+        runner.evaluate(parameters)
+
+
+def debug_local(approach, parameters, question, subject_number, seed):
     runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT, seed=seed)
     runner.evaluate_debug(parameters, subject_number)
 
 #needs to be called with -a and -q (0-4)
+#if execution with slurm run via slurm.sh
+
+#TODO: folder structure anpassen also results mit question folders und diese mit approaches foldern
+# better debugging possibilities
+# value error anschauen
+# wenn keine coverage gemacht werden kann könnte man auch einfach sagen das alle locations gleiche weights bekommen
+# value error bei cardumen nochmal anschauen
+# AE
+
 def main(args):
+    debugging = False
+    local =  False
+    slurm = True
+    slurm_old = False
+    
+    if(slurm_old):
+        input_id = int(args[0])
+        approaches_names = ["GENPROG", "KALI", "MUTREPAIR", "CARDUMEN"]
+        question = QUESTIONS_SLURM[input_id//4]
+        approach, parameters = APPROACHES[approaches_names[input_id%5]]
 
-    input_id = int(args[0])
 
-    approaches_input = ["GENPROG", "KALI", "MUTREPAIR", "CARDUMEN"]
-    approach, parameters = APPROACHES[approaches_input[input_id//5]]
-    question = QUESTIONS[input_id%5]
+    if (slurm):
+        #input_id liegt zwischen 0 und len(all_combinations)
+        
+        input_id = int(args[0])
+        approaches_names = ["GENPROG", "KALI", "MUTREPAIR", "CARDUMEN"]
+        all_combinations = list(itertools.product(approaches_names, QUESTIONS_SLURM, SEEDS_2))
+        approach_name, question, seed = all_combinations[input_id]
+        approach, parameters = APPROACHES[approach_name]
+        run_slurm(approach, parameters, question, seed)
 
-    #approach, question = parse_args(args)
-    #approach, parameters = approach
-    #approach, parameters = APPROACHES["GENPROG"]
-    #question = QUESTION_1
-    run(approach, parameters, question)
 
-    #subject_number = "434"
-    #debug(approach, parameters, question, subject_number, 0)
+    if (local):
+        approach, question = parse_args(args)
+        approach, parameters = approach
+        approach, parameters = APPROACHES["GENPROG"]
+        question = QUESTION_1
+        run_local(approach, parameters, question)
+    
+    if (debugging and local):
+        approach, parameters = APPROACHES["GENPROG"]
+        subject_number = "434"
+        seed = 0
+        debug_local(approach, parameters, question, subject_number, seed)
 
 if __name__ == "__main__":
     import sys
