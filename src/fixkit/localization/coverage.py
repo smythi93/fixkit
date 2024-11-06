@@ -100,8 +100,8 @@ class CoverageLocalization(Localization):
         self.failing = set()
 
         #waits for the coverage report to be written to the disk
-        if not os.path.exists(self.out / ".report.json"):
-            time.sleep(2)
+        while not os.path.exists(self.out / ".report.json"):
+            time.sleep(1)
 
         with open(self.out / ".report.json") as fp:
             results = json.load(fp)
