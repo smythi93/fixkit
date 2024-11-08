@@ -184,7 +184,12 @@ class PyCardumen(GeneticRepair):
         candidate = selection.clone()
         #Original Cardumen takes the first X statements with a suspicious greater than a given threshold and terminates on TIME
         #we do a weighted random selection of the locations and terminate after max count of generation and mutate one single location every generation
-        location = random.choices(population=self.suggestions, weights=[location.weight for location in self.suggestions])[0]
+        
+        #Wenn alle Weights 0 sind random.py throwt random.py ein ValueError das kann passieren wenn cov location per timeout beendet wird
+        try:
+            location = random.choices(population=self.suggestions, weights=[location.weight for location in self.suggestions])[0]
+        except ValueError:
+            location = random.choice(self.suggestions)
         
         collector = Scope_Constructor()
         for tree in candidate.trees.values():
@@ -202,9 +207,13 @@ class PyCardumen(GeneticRepair):
         # welche gleiche anzahl haben wie placeholder in tmpl
         #und dann NUR EINE INSTANZ erstellen
         probabilities = self.model.filter_by_number_of_items(tmpl.count_placeholder)
-        combination = random.choices(
+        try:
+            combination = random.choices(
             list(probabilities.keys()), list(probabilities.values()), k=1
         )[0]
+        #sollte hier kein Problem sein aber sicherheitshalber
+        except ValueError:
+            combination = random.choice(list(probabilities.keys()))
 
         generator = TemplateInstanceGenerator(tmpl)
         tmpl_instance = generator.construct_one_combination(combination)
@@ -255,8 +264,6 @@ class PyCardumen(GeneticRepair):
         f.e.
         Template 5 Vars and 3 of these Var are in the Statement -> 3/5
         """
-        #Problem here what is when Stmt has no Vars than its always 0.0 and random.choice does not work
-        #Solution -> just random.choice without weighted
         collector = VarNamesCollector()
         collector.visit(statement)
         var_in_statement = collector.vars
@@ -278,7 +285,7 @@ class PyCardumen(GeneticRepair):
                 weights.append(0)
         try:
             return random.choices(population=template_pool, weights=weights, k=1)[0]
-        #wenn weights alle 0 sind dann ValueError alle 0 sind bei uns wenn stmt hat keine Variablen
+        #wenn weights alle 0 sind dann ValueError alle 0 sind bei uns wenn stmt keine Variablen hat
         except ValueError:
             return random.choice(template_pool)
 
