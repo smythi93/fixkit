@@ -96,6 +96,33 @@ def find_corrupted_data(result_path: str) -> List[str]:
     #[ApproachName, SubjectNumber, Exception, Question, Seed]
     return corrupted_data
 
+def find_uncomplete_data(result_path: str) -> List[str]:
+    all_subjects: List[SubjectData] = []
+    files = [os.path.join(result_path, f) for f in os.listdir(result_path)]
+    
+    for file in files:
+        subject = SubjectData(file)
+        all_subjects.append(subject)
+    
+    uncomplete_data = []
+    for subject in all_subjects:
+        if subject.question == 1 and len(subject.data) == 575:
+            continue
+        if subject.question == 2 and len(subject.data) == 435:
+            continue
+        if subject.question == 3 and len(subject.data) == 435:
+            continue
+        if subject.question == 4 and len(subject.data) == 435:
+            continue
+        if subject.question == 5 and len(subject.data) == 435:
+            continue
+
+        subject_info = [subject.approach, subject.question, subject.seed]
+        uncomplete_data.append(subject_info)
+
+    #[ApproachName, Question, Seed]
+    return uncomplete_data
+
 #gives back the total repairs found for a question for a single approach
 def found_repairs_question_approach(data: List[SubjectData], question: int, approach: str) -> Dict[int, int]:
     total_repairs = {}
@@ -214,9 +241,15 @@ def main(args):
     #repairs = found_repairs_question(data, 1)
     #print(repairs)
     #plot_repairs_found(repairs, 1)
-    corrupted_data = find_corrupted_data(RESULTS)
-    with open("eval/corrupted_data.json", "w") as f:
-        json.dump(corrupted_data, f)
+    
+    #corrupted_data = find_corrupted_data(RESULTS)
+    #with open("eval/corrupted_data.json", "w") as f:
+        #json.dump(corrupted_data, f)
+
+    uncomplete_data = find_uncomplete_data(RESULTS)
+    print(len(uncomplete_data))
+    with open("eval/uncomplete_data.json", "w") as f:
+        json.dump(uncomplete_data, f)
 
 
 

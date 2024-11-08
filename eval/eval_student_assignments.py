@@ -19,6 +19,9 @@ import time
 import random
 import numpy as np
 import signal
+import json
+import fileinput
+import tempfile
 from contextlib import contextmanager
 
 #Settings 
@@ -84,6 +87,44 @@ APPROACHES = {
         },
     ),
     "CARDUMEN": (
+        PyCardumen,
+        {
+            "population_size": POPULATION_SIZE,
+            "max_generations": MAX_GENERATION,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
+        },
+    ),
+    #"AE": (PyAE, {"k": 1}),
+}
+
+APPROACHES_FOR_CORRUPTED_DATA = {
+    "PyGenProg": (
+        PyGenProg,
+        {
+            "population_size": POPULATION_SIZE,
+            "max_generations": MAX_GENERATION,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
+        },
+    ),
+    "PyKali": (
+        PyKali,
+        {
+            "max_generations": 1,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
+        },
+    ),
+    "PyMutRepair": (
+        PyMutRepair,
+        {
+            "max_generations": 1,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
+        },
+    ),
+    "PyCardumen": (
         PyCardumen,
         {
             "population_size": POPULATION_SIZE,
@@ -300,7 +341,6 @@ class EvalRunner:
         except Exception as ep:
                 with open(self.output_file, "a") as f:
                     f.write(f"{repair.__class__.__name__},{subject_number},{ep.__class__.__name__}\n")
-                    traceback.TracebackException.from_exception(ep).print(file=f)
                 
                 err_file = os.path.join(self.output_path, f"{repair.__class__.__name__}_err.txt")
                 with open(err_file, "a") as f:
@@ -326,9 +366,85 @@ class EvalRunner:
                 f.write(f"{repair.__class__.__name__},{subject_number}, Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
             
         shutil.rmtree(REP, ignore_errors=True)
+    
+    def evaluate_debug_slurm(self, parameters: Dict, subject_number):
+        subject_path = self.input_path / subject_number
+        test_files = self.get_test_files(subject_path)
+        candidate_name = self.get_candidate_name(subject_path)
+        excludes = self.get_excludes(subject_path)
+
+        start = time.time()
+        try:
+            with time_limit(1800):
+                localization = CoverageLocalization(
+                    src=subject_path,
+                    timeout=60,
+                    cov=candidate_name,
+                    tests=test_files,
+                    metric="Ochiai",
+                    out=REP
+                )
+            
+                repair = self.approach.from_source(
+                    src=subject_path,
+                    excludes=excludes,
+                    localization=localization,
+                    out=REP,
+                    minimizer=DefaultMutationMinimizer(),
+                    **parameters
+                )
+            
+                patches = repair.repair()
+        except Exception as ep:
+                tempfile_name = tempfile.NamedTemporaryFile(delete=False).name
+
+                with open(self.output_file, "r") as original, open(tempfile_name, "w") as temp:
+                    for idx, line in enumerate(original, start=1):
+                        if idx == int(subject_number):
+                            temp.write(f"{repair.__class__.__name__},{subject_number},{ep.__class__.__name__}\n")
+                        else:
+                            temp.write(line)
+
+                # Temporäre Datei ersetzen die Originaldatei
+                shutil.move(tempfile_name, self.output_file)
+                
+                err_file = os.path.join(self.output_path, f"{repair.__class__.__name__}_err.txt")
+                with open(err_file, "a") as f:
+                    f.write(f"{repair.__class__.__name__},{self.get_question()},{subject_number},{self.seed},{ep.__class__.__name__}\n")
+                    traceback.TracebackException.from_exception(ep).print(file=f)
+
+        else:
+            duration = time.time() - start
+            found = False
+            #Wieso macht das meine "patches" kaputt
+            #engine = Tests4PyEngine(AbsoluteFitness(set(), set()), workers=32, out="rep")
+            #engine.evaluate(patches)
+            max_fitness = 0.0
+            for patch in patches:
+                if patch.fitness > max_fitness:
+                    max_fitness = patch.fitness
+                if almost_equal(patch.fitness, 1):
+                    found = True
+                    break        
+
+            tempfile_name = tempfile.NamedTemporaryFile(delete=False).name
+
+            with open(self.output_file, "r") as original, open(tempfile_name, "w") as temp:
+                lines = original.readlines()
+                for idx, line in enumerate(lines, start=1):
+                    if idx == int(subject_number):
+                        temp.write(f"{repair.__class__.__name__},{subject_number}, Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
+                    else:
+                        temp.write(line)
+
+            shutil.move(tempfile_name, self.output_file)
+            #os.remove(self.output_file)
+            #os.rename()
+            
+        shutil.rmtree(REP, ignore_errors=True)
 
 def run_local(approach, parameters, question):
-    for seed in SEEDS_1:     
+    for seed in SEEDS_1:
         runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT_SLURM, seed=seed)
         runner.evaluate(parameters)
 
@@ -346,6 +462,13 @@ def debug_local(approach, parameters, question, subject_number, seed):
     runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT, seed=seed)
     runner.evaluate_debug(parameters, subject_number)
 
+def debug_slurm(approach, parameters, question, subject_number, seed):
+    runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT_SLURM, seed=seed)
+    runner.evaluate_debug_slurm(parameters, subject_number)
+
+
+
+
 #needs to be called with -a and -q (0-4)
 #if execution with slurm run via slurm.sh
 
@@ -359,8 +482,29 @@ def debug_local(approach, parameters, question, subject_number, seed):
 def main(args):
     debugging = False
     local =  False
-    slurm = True
+    slurm = False
     slurm_old = False
+    fix_corrupted = True
+
+    if(fix_corrupted):
+        with open("eval/corrupted_data.json") as f:
+            data = json.load(f)
+            entry = data[-3]
+            
+            approach, parameters = APPROACHES_FOR_CORRUPTED_DATA[entry[0]]
+            question = QUESTIONS_SLURM[int(entry[3])-1]
+            subject_number = entry[1]
+            seed = int(entry[4])
+            print(approach)
+            print(question)
+            print(subject_number)
+            print(seed)
+            print(entry)
+            debug_slurm(approach, parameters, question, subject_number, seed)
+        
+
+
+
     
     if(slurm_old):
         input_id = int(args[0])
