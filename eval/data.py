@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import List, Dict
+from itertools import chain, combinations
 import re
 import matplotlib
 import matplotlib.pyplot as plt
@@ -25,9 +26,9 @@ class SubjectData:
         self.data = self.get_data(file)
         #for debugging
         #print(self.approach, self.question, self.seed)
-        self.subjects = [float(entry[1]) for entry in self.data if len(entry) == 5]
+        self.subjects = [int(entry[1]) for entry in self.data if len(entry) == 5]
         self.fitness = [float(entry[3]) for entry in self.data if len(entry) >= 5]
-        self.durations = [float(entry[4])  for entry in self.data if len(entry) >= 5]
+        self.durations = [float(entry[4]) for entry in self.data if len(entry) >= 5]
         self.found_repairs = [entry[2].strip() for entry in self.data if len(entry) >= 5]
     
     def get_seed(self, file: Path) -> str|None:
@@ -53,7 +54,7 @@ class SubjectData:
         else:
             return None
 
-    def get_data(self, file: Path) -> List[str]:
+    def get_data(self, file: Path) -> List[List[str]]:
         with open(file) as f:
             lines = f.readlines()
             complete_data = []
@@ -108,17 +109,17 @@ def find_uncomplete_data(result_path: str) -> List[str]:
     for subject in all_subjects:
         if subject.question == 1 and len(subject.data) == 575:
             continue
-        if subject.question == 2 and len(subject.data) == 435:
+        elif subject.question == 2 and len(subject.data) == 435:
             continue
-        if subject.question == 3 and len(subject.data) == 435:
+        elif subject.question == 3 and len(subject.data) == 308:
             continue
-        if subject.question == 4 and len(subject.data) == 435:
+        elif subject.question == 4 and len(subject.data) == 357:
             continue
-        if subject.question == 5 and len(subject.data) == 435:
+        elif subject.question == 5 and len(subject.data) == 108:
             continue
-
-        subject_info = [subject.approach, subject.question, subject.seed]
-        uncomplete_data.append(subject_info)
+        else:
+            subject_info = [subject.approach, subject.question, subject.seed]
+            uncomplete_data.append(subject_info)
 
     #[ApproachName, Question, Seed]
     return uncomplete_data
@@ -165,44 +166,70 @@ def plot_repairs_found(repairs, question):
     plt.ylabel("Repairs Found")
 
     # Show the plot
-    plt.savefig(os.path.join(Path(__file__).parent , f"found_repairs_question_{question}.jpg"))
+    plt.savefig(os.path.join(Path(__file__).parent , f"found_repairs_question_{question}.pdf"))
 
+class RepairData:
+    def __init__(self, approach, repairs):
+        self.approach = approach
+        self.repairs = repairs
+        self.uniques = []
+        self.common = []
 
 #dont touch
-def unique_fixes():
-    for input in inputs:
-        files = os.listdir(input)
-        #File = Approach
-        counts = {}
-        for file in files:
-            path_to_file = input / file
-            data = get_data(path_to_file)
-            subject = [int(entry[1]) for entry in data if len(entry) == 5]
-            found_repair = [entry[2].strip() for entry in data if len(entry) == 5]
-            repairs = []
-            for id, entry in enumerate(found_repair):
-                if entry == "True":
-                    repairs.append(subject[id])
-            counts[file] = repairs
-        approaches = list(counts.keys())
-        repairs = counts.values()
-        for id, repair in enumerate(repairs):
-            different_lists = []
-            unique_repair = []
-            not_unique_repair = []
-            for id2, repair2 in enumerate(repairs):
-                if id != id2:
-                    different_lists.extend(repair2)
-            for element in repair:
-                if element in different_lists:
-                    not_unique_repair.append(element)
-                else:
-                    unique_repair.append(element)
-            approach = approaches[id]
-            with open(QUESTION_1 / "unique_repairs.txt", "a") as f:
-                f.write(f"{approach}\n")
-                f.write(f"unique: {unique_repair}\n")
-                f.write(f"not unique: {not_unique_repair}\n")
+def find_unique_fixes(data: List[SubjectData], question: int):
+    filter_data: List[SubjectData] = []
+    #collect all the subjects of interest
+    for approach in APPROACHES:
+        for subject in data:
+            if subject.approach == approach and subject.question == question:
+                filter_data.append(subject)
+
+    filter_data2: List[RepairData] = []
+    #find all repairs from one approach
+    for approach in APPROACHES:
+        repairs = set()
+        for subject in filter_data:
+            if subject.approach == approach:
+                for id, entry in enumerate(subject.found_repairs):
+                    if entry == "True":
+                        repairs.add(subject.subjects[id])
+        filter_data2.append(RepairData(approach, repairs))
+    
+    #find uniques, common from one approach
+    for repair_data_1 in filter_data2:
+        other_repairs = set()
+        for repair_data_2 in filter_data2:
+            if repair_data_2.approach != repair_data_1.approach:
+                for repair in repair_data_2.repairs:
+                    other_repairs.add(repair)
+        for repair in repair_data_1.repairs:
+            if repair not in other_repairs:
+                repair_data_1.uniques.append(repair)
+            else:
+                repair_data_1.common.append(repair)
+
+    return filter_data2
+
+
+def organize_repairs(data: List[RepairData]):
+    powerset = chain.from_iterable(combinations(APPROACHES, r) for r in range(1,len(APPROACHES)+1))
+    results = {}
+    for combination in powerset:
+        repairs = []
+        for approach in combination:
+            for other in data:
+                if approach == other.approach:
+                    repairs.append(set(other.repairs))
+        results[combination] = set.intersection(*repairs)
+
+    for k,v in results.items():
+        print(k,len(v))
+
+
+
+
+
+
 
 def plot_unique_fixes():
     for input in inputs:
@@ -235,30 +262,29 @@ def plot_unique_fixes():
         
 def main(args):
     data = create_data(RESULTS)
-    subject = data[1]
+
+    r = find_unique_fixes(data, 1)
+    organize_repairs(r)
     #print(subject.question, subject.approach, subject.seed)
-    
-    #repairs = found_repairs_question(data, 1)
-    #print(repairs)
-    #plot_repairs_found(repairs, 1)
+    #for number in range(1,6):
+        #repairs = found_repairs_question(data, number)
+        #plot_repairs_found(repairs, number)
     
     #corrupted_data = find_corrupted_data(RESULTS)
     #with open("eval/corrupted_data.json", "w") as f:
         #json.dump(corrupted_data, f)
 
-    uncomplete_data = find_uncomplete_data(RESULTS)
-    print(len(uncomplete_data))
-    with open("eval/uncomplete_data.json", "w") as f:
-        json.dump(uncomplete_data, f)
+    #with open("eval/corrupted_data.json") as f:
+            #data = json.load(f)
+            #data = [entry for entry in data if entry[2] != "TimeoutException" and entry[2] != "TimeoutExpired"]
+            #am anfang 295
+            #print(len(data))
 
-
-
-
-
-
+    #uncomplete_data = find_uncomplete_data(RESULTS)
+    #with open("eval/uncomplete_data.json", "w") as f:
+        #json.dump(uncomplete_data, f)
 
 
 if __name__ == "__main__":
     import sys
-
     main(sys.argv[1:])
