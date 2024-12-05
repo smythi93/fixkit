@@ -51,6 +51,14 @@ QUESTION_3_SLURM = REF_BENCHMARK_SLURM / "question_3" #308
 QUESTION_4_SLURM = REF_BENCHMARK_SLURM / "question_4" #357
 QUESTION_5_SLURM = REF_BENCHMARK_SLURM / "question_5" #108
 
+COUNT_TOTAL_SUBJECTS = {
+    1 : 575,
+    2 : 435,
+    3 : 308,
+    4 : 357,
+    5 : 108,
+}
+
 QUESTIONS_SLURM = [QUESTION_1_SLURM, QUESTION_2_SLURM, QUESTION_3_SLURM, QUESTION_4_SLURM, QUESTION_5_SLURM]
 
 OUTPUT_SLURM = Path("/vol/fob-vol5/nebenf22/werkkai/dev/fixkit/eval/results")
@@ -199,6 +207,7 @@ class EvalRunner:
                     match = number_pattern.search(line)
                     if match:
                         return int(match.group())
+            return 0
         else:
             return 0
 
@@ -466,17 +475,13 @@ def debug_slurm(approach, parameters, question, subject_number, seed):
     runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT_SLURM, seed=seed)
     runner.evaluate_debug_slurm(parameters, subject_number)
 
-
-
-
 #needs to be called with -a and -q (0-4)
 #if execution with slurm run via slurm.sh
 
-#TODO: folder structure anpassen also results mit question folders und diese mit approaches foldern
+#TODO:
 # better debugging possibilities
-# value error anschauen
-# wenn keine coverage gemacht werden kann könnte man auch einfach sagen das alle locations gleiche weights bekommen
-# value error bei cardumen nochmal anschauen
+# wenn keine coverage gemacht werden kann könnte man auch einfach sagen das alle locations gleiche weights bekommen !!!
+# Bisher nur Problem bei Cardumen gewesen, aber mit Marius besprechen wäre elegante Lösung
 # AE
 
 def main(args):
@@ -487,23 +492,18 @@ def main(args):
     fix_corrupted = True
 
     if(fix_corrupted):
-        with open("eval/corrupted_data.json") as f:
+        with open("corrupted_data.json") as f:
             data = json.load(f)
-            entry = data[-3]
-            
-            approach, parameters = APPROACHES_FOR_CORRUPTED_DATA[entry[0]]
-            question = QUESTIONS_SLURM[int(entry[3])-1]
-            subject_number = entry[1]
-            seed = int(entry[4])
-            print(approach)
-            print(question)
-            print(subject_number)
-            print(seed)
-            print(entry)
-            debug_slurm(approach, parameters, question, subject_number, seed)
-        
-
-
+            data = [entry for entry in data if entry[2] != "TimeoutException" and entry[2] != "TimeoutExpired"]
+            print(data)
+            for entry in data:
+                approach, parameters = APPROACHES_FOR_CORRUPTED_DATA[entry[0]]
+                question = QUESTIONS_SLURM[int(entry[3])-1]
+                subject_number = entry[1]
+                seed = int(entry[4])
+                print("start")
+                debug_slurm(approach, parameters, question, subject_number, seed)
+                print(f"finished: {approach, question, subject_number, seed}")
 
     
     if(slurm_old):
@@ -512,17 +512,18 @@ def main(args):
         question = QUESTIONS_SLURM[input_id//4]
         approach, parameters = APPROACHES[approaches_names[input_id%5]]
 
-
     if (slurm):
-        #input_id liegt zwischen 0 und len(all_combinations)
         
-        input_id = int(args[0])
-        approaches_names = ["GENPROG", "KALI", "MUTREPAIR", "CARDUMEN"]
-        all_combinations = list(itertools.product(approaches_names, QUESTIONS_SLURM, SEEDS_2))
-        approach_name, question, seed = all_combinations[input_id]
-        approach, parameters = APPROACHES[approach_name]
+        #input_id = int(args[0])
+        #approaches_names = ["GENPROG", "KALI", "MUTREPAIR", "CARDUMEN"]
+        #all_combinations = list(itertools.product(approaches_names, QUESTIONS_SLURM, SEEDS_2))
+        #approach_name, question, seed = all_combinations[input_id]
+        #approach, parameters = APPROACHES[approach_name]
+        approach, parameters = APPROACHES["CARDUMEN"]
+        question = QUESTION_5_SLURM
+        seed = 8013
+        #nochmal schauen am anfang wurde einer doppelt ausgeführt!!
         run_slurm(approach, parameters, question, seed)
-
 
     if (local):
         approach, question = parse_args(args)
