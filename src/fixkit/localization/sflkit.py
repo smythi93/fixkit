@@ -22,6 +22,7 @@ class SFLKitLocalization(Localization):
     def __init__(
         self,
         src: os.PathLike,
+        timeout: Optional[int] = None,
         failing: Optional[List[str]] = None,
         passing: Optional[List[str]] = None,
         tests: Optional[List[str]] = None,
@@ -51,7 +52,7 @@ class SFLKitLocalization(Localization):
         :param Optional[List[str]] excluded_files: The files to exclude in the localization.
         :param Optional[os.PathLike] test_base: The base directory for the tests.
         """
-        super().__init__(src, failing, passing, tests, out, env, metric)
+        super().__init__(src, timeout, failing, passing, tests, out, env, metric)
         self.events = events
         self.predicates = predicates
         self.included_files = included_files or list()

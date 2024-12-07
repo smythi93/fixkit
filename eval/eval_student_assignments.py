@@ -180,7 +180,7 @@ def time_limit(seconds):
         signal.alarm(0)
 
 class EvalRunner:
-    def __init__(self, approach, input_path, output_path, seed, slurm=False) -> None:
+    def __init__(self, approach: GeneticRepair, input_path: Path, output_path: Path, seed:int, slurm:bool=False) -> None:
         self.approach = approach
         self.input_path = input_path
         self.output_path = output_path
