@@ -1,8 +1,12 @@
-import argparse
 import random
 import time
+import signal
+import traceback
+import os
+import shutil
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Type, Dict, Any, Tuple
+from typing import Dict, Any
 
 import numpy as np
 import tests4py.api as t4p
@@ -17,11 +21,12 @@ from fixkit.repair.pygenprog import PyGenProg
 from fixkit.repair.pykali import PyKali
 from fixkit.repair.pymutrepair import PyMutRepair
 from fixkit.repair.pycardumen import PyCardumen
-from fixkit.repair.pyae import PyAE
 
-
-random.seed(0)
-np.random.seed(0)
+TMP = Path(__file__).parent / "tmp"
+SFLKIT_EVENTS = Path(__file__).parent / "sflkit_events"
+OUTPUT = Path(__file__).parent / "results"
+REP = Path(__file__).parent / "rep"
+SEEDS_1 = [7133,883,6465,7235,3735,5197,2570,3405,2155,9753]
 
 APPROACHES = {
     "GENPROG": (
@@ -49,7 +54,6 @@ APPROACHES = {
             "workers": 32,
         },
     ),
-    "DEEPREPAIR": (None, {}),
     "CARDUMEN": (
         PyCardumen,
         {
@@ -59,15 +63,13 @@ APPROACHES = {
             "workers": 32,
         },
     ),
-    "AE": (PyAE, {"k": 1}),
-    "SPR": (None, {}),
 }
 
 SUBJECTS = {
-    "MIDDLE": {
-        1: t4p.middle_1,
-        2: t4p.middle_2,
-    },
+    #"MIDDLE": {
+    #    1: t4p.middle_1,
+    #    2: t4p.middle_2,
+    #},
     "MARKUP": {
         1: t4p.markup_1,
         2: t4p.markup_2,
@@ -75,9 +77,9 @@ SUBJECTS = {
     "EXPRESSION": {
         1: t4p.expression_1,
     },
-    "CALCULATOR": {
-        1: t4p.calculator_1,
-    },
+    #"CALCULATOR": {
+    #    1: t4p.calculator_1,
+    #},
 }
 
 
@@ -85,76 +87,101 @@ def almost_equal(value, target, delta=0.0001):
     return abs(value - target) < delta
 
 
-def evaluate(
-    approach: Type[GeneticRepair], subject: Project, parameters: Dict[str, Any]
-):
-    report = t4p.checkout(subject)
-    if report.raised:
-        raise report.raised
-    start = time.time()
-    approach = approach.from_source(
-        src=Path("tmp", subject.get_identifier()),
-        excludes=DEFAULT_EXCLUDES,
-        localization=Tests4PyLocalization(
-            src=Path("tmp", subject.get_identifier()),
-            events=["line"],
-            predicates=["line"],
-            metric="Ochiai",
-            out="rep",
-        ),
-        out="rep",
-        is_t4p=True,
-        **parameters,
-    )
-    patches = approach.repair()
-    duration = time.time() - start
-    found = False
-    engine = Tests4PyEngine(AbsoluteFitness(set(), set()), workers=32, out="rep")
-    engine.evaluate(patches)
-    for patch in patches:
-        if almost_equal(patch.fitness, 1):
-            found = True
-            break
-    return found, duration
+class TimeoutException(Exception): pass
 
+@contextmanager
+def time_limit(seconds):
+    def signal_handler(signum, frame):
+        raise TimeoutException("Timed out")
+    signal.signal(signal.SIGALRM, signal_handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
 
-def parse_args(args) -> Tuple[Tuple[Type[GeneticRepair], Dict[str, Any]], Project]:
-    parser = argparse.ArgumentParser(description="Evaluate the repair approaches.")
-    parser.add_argument(
-        "-a",
-        help="The repair approach to evaluate.",
-        required=True,
-        dest="approach",
-    )
-    parser.add_argument(
-        "-s",
-        help="The subject to evaluate.",
-        required=True,
-        dest="subject",
-    )
-    parser.add_argument(
-        "-i",
-        help="The bug id to evaluate.",
-        required=True,
-        type=int,
-        dest="bug_id",
-    )
-    args = parser.parse_args(args)
-    return (
-        APPROACHES[args.approach.upper()],
-        SUBJECTS[args.subject.upper()][args.bug_id],
-    )
+class EvalRunner():
+    def __init__(self, subject: Project, approach: GeneticRepair, seed: int, output_path: Path):
+        self.subject = subject
+        self.approach = approach
+        self.seed = seed
+        self.set_seed(self.seed)
+        self.output_path = output_path
+        self.output_file = os.path.join(self.output_path, f"{approach.__name__}_{self.subject.get_identifier()}.txt")
+    
+    def set_seed(self, seed):
+        random.seed(seed)
+        np.random.seed(seed)
 
+    def evaluate(self, parameters: Dict[str, Any]):
+        #work_dir=Path(Path(__file__).parent, "tmp").absolute()
+        report = t4p.checkout(project=self.subject)
+        if report.raised:
+            raise report.raised
+        
+        try:
+            with time_limit(1800):
+                start = time.time()
+                approach = self.approach.from_source(
+                    src=Path("tmp", self.subject.get_identifier()),
+                    excludes=DEFAULT_EXCLUDES,
+                    localization=Tests4PyLocalization(
+                        src=Path("tmp", self.subject.get_identifier()),
+                        events=["line"],
+                        predicates=["line"],
+                        metric="Ochiai",
+                        out="rep",
+                    ),
+                    out="rep",
+                    is_t4p=True,
+                    **parameters,
+                )
+                patches = approach.repair()
+                duration = time.time() - start
+        except Exception as ep:
+            err_file = os.path.join(self.output_path, f"{self.approach.__class__.__name__}_err.txt")
+            with open(err_file, "a") as f:
+                f.write(f"{self.approach.__class__.__name__},{self.subject.get_identifier()},{self.seed},{ep.__class__.__name__}\n")
+                traceback.TracebackException.from_exception(ep).print(file=f)
+        
+        else:
+            found = False
+            engine = Tests4PyEngine(AbsoluteFitness(set(), set()), workers=32, out="rep")
+            engine.evaluate(patches)
+            for patch in patches:
+                if almost_equal(patch.fitness, 1):
+                    found = True
+                    break
+            
+            with open(self.output_file, "a") as f:
+                        f.write(f"{approach.__class__.__name__}, Found: {found}, Fitness: Not measured, Duration: {duration} s, Seed: {self.seed}\n")
+        
+        shutil.rmtree(REP, ignore_errors=True)
+        shutil.rmtree(TMP, ignore_errors=True)
+        shutil.rmtree(SFLKIT_EVENTS, ignore_errors=True)
 
-def main(args):
-
-    #approach, subject = parse_args(args)
+def test():
     approach = APPROACHES["GENPROG"]
     subject = SUBJECTS["EXPRESSION"][1]
     approach, parameters = approach
-    found, duration = evaluate(approach, subject, parameters)
-    with open(f"{approach.__name__}_{subject.get_identifier()}.txt", "w") as f:
-        f.write(f"{approach.__name__},{subject.get_identifier()},{found},{duration}\n")
+    runner = EvalRunner(subject=subject,approach=approach,seed=SEEDS_1[0],output_path=OUTPUT)
+    runner.evaluate(parameters)
+
+def complete_eval_run():
+    for dict in SUBJECTS.values():
+        for subject in dict.values():
+            for approach in APPROACHES:
+                approach, parameters = APPROACHES[approach]
+                for seed in SEEDS_1:
+                    runner = EvalRunner(subject=subject,approach=approach,seed=seed,output_path=OUTPUT)
+                    runner.evaluate(parameters)
+
+
+def main(args):
+    test()
+    #complete_eval_run()
+    print(Path(Path(__file__).parent, "tmp").absolute())
+
 
 
 if __name__ == "__main__":
