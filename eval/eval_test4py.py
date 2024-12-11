@@ -41,7 +41,7 @@ APPROACHES = {
     "KALI": (
         PyKali,
         {
-            "max_generations": 10,
+            "max_generations": 1,
             "w_mut": 0.06,
             "workers": 32,
         },
@@ -49,7 +49,7 @@ APPROACHES = {
     "MUTREPAIR": (
         PyMutRepair,
         {
-            "max_generations": 10,
+            "max_generations": 1,
             "w_mut": 0.06,
             "workers": 32,
         },
@@ -77,6 +77,17 @@ SUBJECTS = {
     "EXPRESSION": {
         1: t4p.expression_1,
     },
+    "PYSNOOPER" : {
+        1: t4p.pysnooper_1,
+        2: t4p.pysnooper_2,
+        3: t4p.pysnooper_3,
+    },
+    "COOKIECUTTER" : {
+        1: t4p.cookiecutter_1,
+        2: t4p.cookiecutter_2,
+        3: t4p.cookiecutter_3,
+        4: t4p.cookiecutter_4,
+    }
     #"CALCULATOR": {
     #    1: t4p.calculator_1,
     #},
@@ -161,8 +172,8 @@ class EvalRunner():
         shutil.rmtree(SFLKIT_EVENTS, ignore_errors=True)
 
 def test():
-    approach = APPROACHES["GENPROG"]
-    subject = SUBJECTS["EXPRESSION"][1]
+    approach = APPROACHES["KALI"]
+    subject = SUBJECTS["MARKUP"][1]
     approach, parameters = approach
     runner = EvalRunner(subject=subject,approach=approach,seed=SEEDS_1[0],output_path=OUTPUT)
     runner.evaluate(parameters)
@@ -173,14 +184,24 @@ def complete_eval_run():
             for approach in APPROACHES:
                 approach, parameters = APPROACHES[approach]
                 for seed in SEEDS_1:
+                    file = os.path.join(OUTPUT, f"{approach.__name__}_{subject.get_identifier()}.txt")
+                    if os.path.exists(file):
+                        with open(file, "r") as f:
+                            file_content = f.read()
+                            if f"Seed: {seed}" in file_content:
+                                continue
                     runner = EvalRunner(subject=subject,approach=approach,seed=seed,output_path=OUTPUT)
                     runner.evaluate(parameters)
 
+def cleanup():
+    shutil.rmtree(REP, ignore_errors=True)
+    shutil.rmtree(TMP, ignore_errors=True)
+    shutil.rmtree(SFLKIT_EVENTS, ignore_errors=True)
 
 def main(args):
-    test()
-    #complete_eval_run()
-    print(Path(Path(__file__).parent, "tmp").absolute())
+    #test()
+    complete_eval_run()
+    #cleanup()
 
 
 
