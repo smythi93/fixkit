@@ -5,7 +5,7 @@ import re
 import matplotlib.pyplot as plt
 import os
 import numpy
-
+import subprocess
 
 QUESTION_1 = Path(__file__).parent / "results" / "question_1"
 QUESTION_2 = Path(__file__).parent / "results" / "question_2"
@@ -453,7 +453,13 @@ def run_all_tests(test_dir):
     #sys.stderr = output
 
     # Run pytest
-    exit_code = pytest.main([test_dir, "--capture=no"])  # Option "--capture=no" für vollständige Ausgabe
+    result = subprocess.run(
+            ["pytest", test_dir, "--capture=no"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+    
 
     # Restore stdout and stderr
     sys.stdout = sys.__stdout__
@@ -463,18 +469,22 @@ def run_all_tests(test_dir):
     #print(output.getvalue())
 
     # Return the exit code
-    return exit_code
+    return result.returncode
 
-def find_already_working_subjects(data: List[ApproachRepairData]):
+def find_already_working_subjects(data: List[ApproachRepairData]) -> Set[Tuple[int, int]]:
     #ich vermute das einige subjects schon funktionieren bevor sie repariert werden
     common_repairs = common_repairs_venn(data)
     common_repairs_all_approaches = common_repairs[('PyCardumen', 'PyKali', 'PyGenProg', 'PyMutRepair')]
+    already_working = set()
     for repair in common_repairs_all_approaches:
         question, id = repair
         path = Path(__file__).parent
         id = str(id).zfill(3)
         path = os.path.join(path, f"refactory_benchmark" ,f"question_{question}", f"{id}")
-        print(run_all_tests(path))
+        exit_code = run_all_tests(path)
+        if exit_code == 0:
+            already_working.add(repair)
+    return already_working
 
 
 
@@ -513,17 +523,15 @@ def plot_common_fixes_times(data: List[ApproachRepairData], question: int = 0, f
         for repair in approach_tmp[approach]:
             repair: Repair
             approach_times.add(repair.time)
-            print(repair.time)
         data[approach] = approach_times
     
-    print(data)
     # Daten für den Boxplot vorbereiten
     approaches = list(data.keys())
     measurements = [list(times) for times in data.values()]
 
     # Boxplot erstellen
     plt.figure(figsize=(8, 6))
-    plt.boxplot(measurements, labels=approaches, patch_artist=True, boxprops=dict(facecolor="lightblue"))
+    plt.boxplot(measurements, tick_labels=approaches, patch_artist=True, boxprops=dict(facecolor="lightblue"))
 
     # Diagramm verschönern
     plt.title("Comparing times for common fixes", fontsize=14)
@@ -538,18 +546,33 @@ def plot_common_fixes_times(data: List[ApproachRepairData], question: int = 0, f
     else:
         plt.savefig(os.path.join(Path(__file__).parent , f"time_common_fixes.pdf"))
 
+def filter_out_already_working_subjects(data: List[ApproachRepairData]) -> List[ApproachRepairData]:
+    already_working = find_already_working_subjects(data)
+    for approach in data:
+        approach.repairs = [
+            repair for repair in approach.repairs
+            if not any(
+                repair.question == question and repair.id == id
+                for question, id in already_working
+            )
+        ]
+    #assert??? das sie nciht mehr drinnen sind
+    return data
 
 #TODO: repair data sollte ein dict sein mit key approach
 def main(args):
     #Subject Data
     subject_data = create_subject_data(RESULTS)
     repair_data = create_repair_data(subject_data)
+    print("Before filtering: ")
+    plot_common_fixes_times(repair_data)
+    filtered_repair_data = filter_out_already_working_subjects(repair_data)
+    print("After filtering: ")
+    plot_common_fixes_times(filtered_repair_data)
     #uniques = find_unique_repairs(repair_data)
     #common_repairs = common_repairs_venn(repair_data)
     #times = calculate_time_to_fix_on_common_repairs(repair_data)
     #total_repairs = count_total_repairs(repair_data)
-    plot_common_fixes_times(repair_data)
-    find_already_working_subjects(repair_data)
 
 
 
