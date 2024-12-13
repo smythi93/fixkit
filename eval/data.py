@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import os
 import numpy
 import subprocess
+import json
 
 QUESTION_1 = Path(__file__).parent / "results" / "question_1"
 QUESTION_2 = Path(__file__).parent / "results" / "question_2"
@@ -359,7 +360,7 @@ def common_repairs_by_approach_combination(data):
         print(k,len(v))
 
 #common repairs for venn diagrammm also exklusive schnittmengen
-def common_repairs_venn(repair_data: List[ApproachRepairData], question: int = 0, filter: bool = False) -> Dict[str, Set[Tuple[int, int]]]:
+def common_repairs_venn(repair_data: List[ApproachRepairData], question: int = 0, filter: bool = False) -> Dict[Tuple[str, ...], Set[Tuple[int, int]]]:
     """
     returns: Dict[str, Set[Tuple[int,int]]] 
     the string is a the name of the approach 
@@ -391,7 +392,8 @@ def common_repairs_venn(repair_data: List[ApproachRepairData], question: int = 0
     
     #no duplicates in der gesamten menge
     assert(sum([len(r) for r in results.values()]) == len(set.union(*(set(r) for r in results.values()))))
-    assert(set([(rep.question, rep.id) for approach in repair_data for rep in approach.repairs]) == set.union(*(set(r) for r in results.values())))
+    if not filter:
+        assert(set([(rep.question, rep.id) for approach in repair_data for rep in approach.repairs]) == set.union(*(set(r) for r in results.values())))
 
     for k,v in results.items():
         print(k,len(v))
@@ -489,42 +491,55 @@ def find_already_working_subjects(data: List[ApproachRepairData]) -> Set[Tuple[i
 
 
 def plot_common_fixes_times(data: List[ApproachRepairData], question: int = 0, filter: bool = False):
-    #TODO: filter für questions momentan einfach alle
-
-    #erstmal average refining later
-    common_repairs = common_repairs_venn(data)
+    #Filtering wird einfach weitergegeben
+    common_repairs = common_repairs_venn(repair_data=data, question=question, filter=filter)
 
     #tuples of repairs transforming to Repair Objects with the fastest time
     #erstmal ohne fastest time
     common_repairs_all_approaches = common_repairs[('PyCardumen', 'PyKali', 'PyGenProg', 'PyMutRepair')]
 
-    #TODO: hier nochmal alle reinnehmen egal welcher seed es gefunden hat dann natürlich unterschiedlich viele werte für jeden approach aber egal
-    #TODO: später dann noch auch alle repairs mit reinnehmen welche auch nicht von allen gefunden wurde aber min. immer 2 also aller außer die uniques
-    
+    #TODO: repair data sollte wahrscheinlich nen dict sein ..
+    #jetzt gehen wir alle repairs durch und nicht nur common repairs all approaches
     #collecting repairs 
     approach_tmp = dict()
     for approach in APPROACHES:
         tmp = set()
-        for common_repair in common_repairs_all_approaches:
-            question, id = common_repair
-            for repair_data in data:
-                if repair_data.approach_name == approach:
-                    for repair in repair_data.repairs:
-                        if repair.approach == approach and repair.question == question and repair.id == id:
-                            tmp.add(repair)
-                            break
+        for combination in common_repairs:
+            if len(combination) == 1:
+                continue
+            if approach not in combination:
+                continue
+            for common_repair in common_repairs[combination]:
+                question, id = common_repair
+                for repair_data in data:
+                    if repair_data.approach_name == approach:
+                        for repair in repair_data.repairs:
+                            if repair.approach == approach and repair.question == question and repair.id == id:
+                                tmp.add(repair)
+                                break
         approach_tmp[approach] = tmp
     
+    if filter:
+        for approach in approach_tmp:
+            for repair in approach_tmp[approach]:
+                assert(repair.question == question)
     #collecting times
-    #TODO: besseren namen für data
-    data = dict()
+    #TODO: besseren namen für data -> times?
+    data: Dict = dict()
     for approach in approach_tmp:
+        #TODO: das sollte wahrscheinlich kein set sondern eine liste sein ..
         approach_times = set()
         for repair in approach_tmp[approach]:
             repair: Repair
+            if repair.time < 3.0:
+                print(f"Schnelle Reperatur: {repair.approach, repair.question, repair.id}")
+                #continue
             approach_times.add(repair.time)
         data[approach] = approach_times
     
+    for k,v in data.items():
+        print(k,v)
+        print()
     # Daten für den Boxplot vorbereiten
     approaches = list(data.keys())
     measurements = [list(times) for times in data.values()]
@@ -533,6 +548,12 @@ def plot_common_fixes_times(data: List[ApproachRepairData], question: int = 0, f
     plt.figure(figsize=(8, 6))
     plt.boxplot(measurements, tick_labels=approaches, patch_artist=True, boxprops=dict(facecolor="lightblue"))
 
+    # Anzahl der Messungen unter den Labels hinzufügen
+    measurement_counts = [len(times) for times in measurements]
+    for i, count in enumerate(measurement_counts):
+        plt.text(i + 1, plt.ylim()[0] - (plt.ylim()[1] * 0.05),  # Adjust position slightly below the x-axis
+                f'n={count}', ha='center', va='top', fontsize=10)
+    
     # Diagramm verschönern
     plt.title("Comparing times for common fixes", fontsize=14)
     plt.ylabel("Time in seconds", fontsize=12)
@@ -547,6 +568,11 @@ def plot_common_fixes_times(data: List[ApproachRepairData], question: int = 0, f
         plt.savefig(os.path.join(Path(__file__).parent , f"time_common_fixes.pdf"))
 
 def filter_out_already_working_subjects(data: List[ApproachRepairData]) -> List[ApproachRepairData]:
+    
+    #TODO: Copy machen von data und dann die copy returnen?
+    # reicht einfache copy oder muss deepcopy sein??
+
+
     already_working = find_already_working_subjects(data)
     for approach in data:
         approach.repairs = [
@@ -556,25 +582,41 @@ def filter_out_already_working_subjects(data: List[ApproachRepairData]) -> List[
                 for question, id in already_working
             )
         ]
-    #assert??? das sie nciht mehr drinnen sind
+    #TODO: assert??? das sie nciht mehr drinnen sind
     return data
 
+def save_repair_data(data: List[ApproachRepairData]):
+    results = dict()
+    for approach in data:
+        tmp = set()
+        for repair in approach.repairs:
+            tmp.add((repair.question, repair.id, repair.seed))
+        tmp_sorted = sorted(tmp)
+        results[approach.approach_name] = tmp_sorted
+    
+    with open(os.path.join(Path(__file__).parent , f"repair_data.json"), "w") as f:
+        json.dump(results, f)
+
+def load_repair_data():
+    #TODO: save überarbeiten und load dann repairs erstellen lassen
+    pass
+
+#TODO: common time für alle sieht komisch aus
 #TODO: repair data sollte ein dict sein mit key approach
 def main(args):
     #Subject Data
     subject_data = create_subject_data(RESULTS)
     repair_data = create_repair_data(subject_data)
-    print("Before filtering: ")
-    plot_common_fixes_times(repair_data)
     filtered_repair_data = filter_out_already_working_subjects(repair_data)
-    print("After filtering: ")
-    plot_common_fixes_times(filtered_repair_data)
-    #uniques = find_unique_repairs(repair_data)
+    save_repair_data(filtered_repair_data)
+    #plot_common_fixes_times(repair_data)
     #common_repairs = common_repairs_venn(repair_data)
+    
+    #plot_common_fixes_times(filtered_repair_data)
+    #uniques = find_unique_repairs(repair_data)
+    #common_repairs = common_repairs_venn(filtered_repair_data)
     #times = calculate_time_to_fix_on_common_repairs(repair_data)
     #total_repairs = count_total_repairs(repair_data)
-
-
 
     #corrupted_data = find_corrupted_data(RESULTS)
     #with open("eval/corrupted_data.json", "w") as f:
@@ -589,7 +631,6 @@ def main(args):
     #uncomplete_data = find_uncomplete_data(RESULTS)
     #with open("eval/uncomplete_data.json", "w") as f:
         #json.dump(uncomplete_data, f)
-
 
 
 if __name__ == "__main__":
