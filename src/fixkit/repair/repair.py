@@ -29,7 +29,7 @@ from fixkit.localization import Localization
 from fixkit.localization.location import WeightedIdentifier, WeightedLocation
 from fixkit.localization.normalization import normalize
 from fixkit.logger import LOGGER
-from fixkit.search.search import EvolutionaryStrategy, SearchStrategy
+from fixkit.search.search import EvolutionaryStrategy, SearchStrategy, ExhaustiveStrategy
 from fixkit.stmt import StatementFinder
 
 
@@ -173,6 +173,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         self.minimizer.fitness = self.fitness
         self.line_mode = line_mode
         self.strategy = None
+        self.fitness_tracking = dict()
 
     def get_search_strategy(self) -> SearchStrategy:
         return EvolutionaryStrategy(
@@ -230,13 +231,16 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
             LOGGER.info(
                 "Filling the population and evaluating the fitness of each candidate."
             )
-            self.population = self.fill_population(self.population)
+            if not isinstance(self.strategy, ExhaustiveStrategy):
+                self.population = self.fill_population(self.population)
             self.fitness.evaluate(self.population)
 
             # Iterate until the maximum number of generations is reached or the fault is repaired.
             for gen in range(self.max_generations):
                 LOGGER.info(f"Generation {gen + 1}/{self.max_generations}:")
                 self.iteration()
+                self.log_fitness()
+                self.fitness_tracking[gen+1] = max(c.fitness for c in self.population)
                 if self.abort():
                     LOGGER.info("Found a repair for the fault.")
                     break
@@ -307,6 +311,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
                     self.suggestions.append(
                         WeightedIdentifier(identifier, suggestion.weight)
                     )
+        self.suggestions = sorted(self.suggestions, key=lambda x: (-x.weight, x.identifier))
 
     # noinspection PyMethodMayBeStatic
     def prepare_population(self, population: Population) -> Population:
@@ -409,3 +414,16 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         Filter the population to remove duplicates.
         """
         return list(set(population))
+    
+    def log_fitness(self):
+        if self.population:
+            best_candidate = max(self.population, key=lambda c: c.fitness)
+            LOGGER.info("The best candidate has a fitness of %.2f.", best_candidate.fitness)
+            LOGGER.info("With the following mutations: %s", best_candidate.mutations)
+        else:
+            LOGGER.info("No candidates in the population.")
+
+        for i, candidate in enumerate(self.population):
+            if candidate.mutations:
+                LOGGER.debug(f"Candidate {i} has a fitness of "
+                            f"{candidate.fitness:.2f} by mutating {candidate.mutations}")

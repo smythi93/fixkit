@@ -16,6 +16,8 @@ from fixkit.localization.location import WeightedLocation
 from fixkit.repair.repair import GeneticRepair
 from fixkit.genetic.selection import UniversalSelection, Selection
 from fixkit.genetic.minimize import MutationMinimizer
+from fixkit.logger import LOGGER
+
 class PyGenProg(GeneticRepair):
     """
     Class for repairing a fault using GenProg.
@@ -54,6 +56,8 @@ class PyGenProg(GeneticRepair):
         :param float w_neg_t: The weight for the negative test cases.
         """
         self.metric = GenProgFitness(set(), set(), w_pos_t=w_pos_t, w_neg_t=w_neg_t)
+        print("Hello World!")
+        LOGGER.info("Hello World!")
         super().__init__(
             src=src,
             fitness=self.metric,
@@ -61,6 +65,7 @@ class PyGenProg(GeneticRepair):
             population_size=population_size,
             max_generations=max_generations,
             w_mut=w_mut,
+            #Delete entfernt für reruns
             operators=[Delete, InsertBoth, Replace],
             selection=selection or UniversalSelection(),
             crossover_operator=OnePointCrossover(),
@@ -73,6 +78,7 @@ class PyGenProg(GeneticRepair):
             line_mode=line_mode,
             excludes=excludes,
         )
+        LOGGER.info(f"{self.operator}")
 
     @classmethod
     def from_source(

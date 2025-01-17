@@ -14,6 +14,7 @@ QUESTION_3 = Path(__file__).parent / "results" / "question_3"
 QUESTION_4 = Path(__file__).parent / "results" / "question_4"
 QUESTION_5 = Path(__file__).parent / "results" / "question_5"
 RESULTS = Path(__file__).parent / "results"
+RERUN_RESULTS = Path(__file__).parent / "results_reruns"
 
 
 APPROACHES = ["PyCardumen", "PyKali", "PyGenProg", "PyMutRepair"]
@@ -71,6 +72,34 @@ class SubjectData:
                 cleaned_line = (line.replace("Found: ", "")
                             .replace("Fitness: ", "")
                             .replace("Duration: ", "")
+                            .replace(" s", "")
+                            .strip())
+                data = cleaned_line.split(",")
+                complete_data.append(data)
+            return complete_data
+
+class SubjectDataRerun():
+    def __init__(self, file):
+        self.data = self.get_data(file)
+        self.approach = [entry[0].strip() for entry in self.data]
+        self.question = [int(entry[1]) for entry in self.data]
+        self.id = [int(entry[2]) for entry in self.data]
+        self.generations = [int(entry[3]) for entry in self.data]
+        self.seed = [int(entry[4]) for entry in self.data]
+        self.found_repairs = [entry[5].strip() for entry in self.data]
+        self.fitness = [float(entry[6]) for entry in self.data]
+        self.durations = [float(entry[7]) for entry in self.data]
+
+    def get_data(self, file: Path) -> List[List[str]]:
+        with open(file) as f:
+            lines = f.readlines()
+            complete_data = []
+            for line in lines:
+                cleaned_line = (line.replace("Found: ", "")
+                            .replace("Fitness: ", "")
+                            .replace("Duration: ", "")
+                            .replace("Generations: ", "")
+                            .replace("Seed: ", "")
                             .replace(" s", "")
                             .strip())
                 data = cleaned_line.split(",")
@@ -193,12 +222,12 @@ class Repair:
     the identification of a single repair 
     of the refactory benchmark
     """
-    def __init__(self, approach: str, question: int, seed: int, id: int, time: float):
+    def __init__(self, approach: str, question: int, id: int, time: float, seed: int):
         self.approach: str = approach
         self.question: int = question
-        self.seed: int = seed
         self.id: int = id
         self.time: float = time
+        self.seed: int = seed
 
     def __eq__(self, other):
         return (isinstance(other, Repair) 
@@ -211,17 +240,12 @@ class Repair:
     def __hash__(self):
         return hash((self.approach, self.question, self.seed, self.id, self.time))
     
-class ApproachRepairData:
-    """
-    a collection of repairs for a approach 
-    of all the questions of the refactory benchmark
-    """
-    def __init__(self, approach: str, repairs: List[Repair]):
-        self.approach_name = approach
-        self.repairs = repairs
+    @classmethod
+    def fromTuple(cls, tpl: Tuple):
+        return cls(str(tpl[0]), int(tpl[1]), int(tpl[2]), float(tpl[3]), int(tpl[4]))
 
-def create_repair_data(data: List[SubjectData]) -> List[ApproachRepairData]:
-    repair_data = []
+def create_repair_data(data: List[SubjectData]) -> Dict[str, List[Repair]]:
+    repair_data = dict()
     #find all repairs from one approach
     for approach in APPROACHES:
         repairs = []
@@ -229,19 +253,17 @@ def create_repair_data(data: List[SubjectData]) -> List[ApproachRepairData]:
             if subject.approach == approach:
                 for id, entry in enumerate(subject.found_repairs):
                     if entry == "True":
-                        #das ist ein bisschen hässlich aber ist jetzt so
                         bug_id = subject.subjects[id]
                         time = subject.durations[id]
-                        #HIER PROBLEM DAS ES MANCHMAL GLEICHE REPAIRS GIBT MIT UNTERSCHIEDLICHEN SEEDS
-                        repair = Repair(subject.approach, subject.question, subject.seed, bug_id, time)
+                        repair = Repair(approach=subject.approach, question=subject.question, seed=subject.seed, id=bug_id, time=time)
                         repairs.append(repair)
-        repair_data.append(ApproachRepairData(approach, repairs))
+        repair_data[approach] = repairs
     
-    assert(len(repair_data) == len(APPROACHES))
+    assert(len(repair_data.keys()) == len(APPROACHES))
 
     return repair_data
 
-def count_total_repairs(repair_data: List[ApproachRepairData], question: int = 0, filter: bool = False) -> Dict[str, Dict[int,int]]:
+def count_total_repairs(repair_data: Dict[str, List[Repair]], question: int = 0, filter: bool = False) -> Dict[str, Dict[int,int]]:
     """
     returns: Dict[str, Dict[int,int]]
     str: approach name
@@ -253,9 +275,9 @@ def count_total_repairs(repair_data: List[ApproachRepairData], question: int = 0
     data = dict()
     for approach in repair_data:
         if filter:
-            data[approach.approach_name] = set([repair for repair in approach.repairs if repair.question == question])
+            data[approach] = [repair for repair in repair_data[approach] if repair.question == question]
         else:
-            data[approach.approach_name] = set([repair for repair in approach.repairs])
+            data[approach] = repair_data[approach]
 
     #calculate total repairs for every approach for every seed/run
     results = dict()
@@ -291,14 +313,14 @@ def count_total_repairs(repair_data: List[ApproachRepairData], question: int = 0
     return results
 
 
-def find_unique_repairs(repair_data: List[ApproachRepairData], question: int = 0, filter: bool = False) -> Dict[str, Set[Tuple[int, int]]]:
-    #find repairs of approach
+def find_unique_repairs(repair_data: Dict[str, List[Repair]], question: int = 0, filter: bool = False) -> Dict[str, Set[Tuple[int, int]]]:
+    #filter data if only interested in specific question
     data = dict()
     for approach in repair_data:
         if filter:
-            data[approach.approach_name] = set([repair for repair in approach.repairs if repair.question == question])
+            data[approach] = [repair for repair in repair_data[approach] if repair.question == question]
         else:
-            data[approach.approach_name] = set([repair for repair in approach.repairs])
+            data[approach] = repair_data[approach]
 
     #collect all the repairs from the other approaches
     other_repairs = dict()
@@ -360,7 +382,7 @@ def common_repairs_by_approach_combination(data):
         print(k,len(v))
 
 #common repairs for venn diagrammm also exklusive schnittmengen
-def common_repairs_venn(repair_data: List[ApproachRepairData], question: int = 0, filter: bool = False) -> Dict[Tuple[str, ...], Set[Tuple[int, int]]]:
+def common_repairs_venn(repair_data: Dict[str, List[Repair]], question: int = 0, filter: bool = False) -> Dict[Tuple[str, ...], Set[Tuple[int, int]]]:
     """
     returns: Dict[str, Set[Tuple[int,int]]] 
     the string is a the name of the approach 
@@ -370,12 +392,31 @@ def common_repairs_venn(repair_data: List[ApproachRepairData], question: int = 0
     """
     
     data = {}
+    mapping = {}
     #convert data to a dict of set of tuples, every tuple represents a repair
     for approach in repair_data:
+        tmp = set()
         if filter:
-            data[approach.approach_name] = set([(repair.question, repair.id) for repair in approach.repairs if repair.question == question])
+            for repair in repair_data[approach]:
+                
+                if repair.question == question:
+                    tmp.add((repair.question, repair.id))
+                    try:
+                        a = mapping[(repair.question, repair.id)]
+                        a.append(repair)
+                    except KeyError:
+                        mapping[(repair.question, repair.id)] = [repair]
+            data[approach] = tmp
+            
         else:
-            data[approach.approach_name] = set([(repair.question, repair.id) for repair in approach.repairs])
+            for repair in repair_data[approach]:
+                tmp.add((repair.question, repair.id))
+                try:
+                    a = mapping[(repair.question, repair.id)]
+                    a.append(repair)
+                except KeyError:
+                    mapping[(repair.question, repair.id)] = [repair]
+            data[approach] = tmp
 
     powerset = chain.from_iterable(combinations(APPROACHES, r) for r in range(1, len(APPROACHES)+1))
     results = {}
@@ -390,10 +431,20 @@ def common_repairs_venn(repair_data: List[ApproachRepairData], question: int = 0
 
         results[combination] = tuple(sorted(intersect, key=lambda t: (t[0], t[1])))
     
+    results2 = dict()
+    for combination in results:
+        common_repairs = results[combination]
+        tmp = list()
+        for repair in common_repairs:
+            a = mapping[repair]
+            for b in a:
+                tmp.append(b)
+        results2[combination] = tmp
+
     #no duplicates in der gesamten menge
     assert(sum([len(r) for r in results.values()]) == len(set.union(*(set(r) for r in results.values()))))
     if not filter:
-        assert(set([(rep.question, rep.id) for approach in repair_data for rep in approach.repairs]) == set.union(*(set(r) for r in results.values())))
+        assert(set([(rep.question, rep.id) for repairs in repair_data.values() for rep in repairs]) == set.union(*(set(r) for r in results.values())))
 
     for k,v in results.items():
         print(k,len(v))
@@ -406,7 +457,7 @@ def common_repairs_venn(repair_data: List[ApproachRepairData], question: int = 0
 
     return results
 
-def calculate_time_to_fix_on_common_repairs(data: List[ApproachRepairData]) -> Dict[str, Tuple[float, float]]:
+def calculate_time_to_fix_on_common_repairs(data: Dict[str, List[Repair]]) -> Dict[str, Tuple[float, float]]:
     """
     ich nehme nur die zeit für repairs die wirklich alle gefunden haben
     
@@ -422,6 +473,7 @@ def calculate_time_to_fix_on_common_repairs(data: List[ApproachRepairData]) -> D
     #erstmal ohne fastest time
     common_repairs_all_approaches = common_repairs[('PyCardumen', 'PyKali', 'PyGenProg', 'PyMutRepair')]
     
+    #TODO: Das muss überarbeitet werden da data jetzt ein DICT!!
     approach_tmp = dict()
     for approach in APPROACHES:
         tmp = set()
@@ -473,7 +525,7 @@ def run_all_tests(test_dir):
     # Return the exit code
     return result.returncode
 
-def find_already_working_subjects(data: List[ApproachRepairData]) -> Set[Tuple[int, int]]:
+def find_already_working_subjects(data: Dict[str, List[Repair]]) -> Set[Tuple[int, int]]:
     #ich vermute das einige subjects schon funktionieren bevor sie repariert werden
     common_repairs = common_repairs_venn(data)
     common_repairs_all_approaches = common_repairs[('PyCardumen', 'PyKali', 'PyGenProg', 'PyMutRepair')]
@@ -490,7 +542,7 @@ def find_already_working_subjects(data: List[ApproachRepairData]) -> Set[Tuple[i
 
 
 
-def plot_common_fixes_times(data: List[ApproachRepairData], question: int = 0, filter: bool = False):
+def plot_common_fixes_times(data: Dict[str, List[Repair]], question: int = 0, filter: bool = False):
     #Filtering wird einfach weitergegeben
     common_repairs = common_repairs_venn(repair_data=data, question=question, filter=filter)
 
@@ -501,6 +553,7 @@ def plot_common_fixes_times(data: List[ApproachRepairData], question: int = 0, f
     #TODO: repair data sollte wahrscheinlich nen dict sein ..
     #jetzt gehen wir alle repairs durch und nicht nur common repairs all approaches
     #collecting repairs 
+    #TODO: ANPASSEN DA DATA JETZT EIN DICT IST
     approach_tmp = dict()
     for approach in APPROACHES:
         tmp = set()
@@ -511,12 +564,10 @@ def plot_common_fixes_times(data: List[ApproachRepairData], question: int = 0, f
                 continue
             for common_repair in common_repairs[combination]:
                 question, id = common_repair
-                for repair_data in data:
-                    if repair_data.approach_name == approach:
-                        for repair in repair_data.repairs:
-                            if repair.approach == approach and repair.question == question and repair.id == id:
-                                tmp.add(repair)
-                                break
+                for repair in data[approach]:
+                    if repair.approach == approach and repair.question == question and repair.id == id:
+                        tmp.add(repair)
+                        break
         approach_tmp[approach] = tmp
     
     if filter:
@@ -567,57 +618,99 @@ def plot_common_fixes_times(data: List[ApproachRepairData], question: int = 0, f
     else:
         plt.savefig(os.path.join(Path(__file__).parent , f"time_common_fixes.pdf"))
 
-def filter_out_already_working_subjects(data: List[ApproachRepairData]) -> List[ApproachRepairData]:
+def filter_out_already_working_subjects(data: Dict[str, List[Repair]]) -> Dict[str, List[Repair]]:
     
-    #TODO: Copy machen von data und dann die copy returnen?
-    # reicht einfache copy oder muss deepcopy sein??
-
-
     already_working = find_already_working_subjects(data)
+    results = dict()
     for approach in data:
-        approach.repairs = [
-            repair for repair in approach.repairs
+        repairs = [repair for repair in data[approach]
             if not any(
                 repair.question == question and repair.id == id
                 for question, id in already_working
-            )
-        ]
-    #TODO: assert??? das sie nciht mehr drinnen sind
-    return data
+                )
+            ]
+        results[approach] = repairs
 
-def save_repair_data(data: List[ApproachRepairData]):
+    #TODO: assert??? das sie nicht mehr drinnen sind
+    return results
+
+def save_filtered_data(data: Dict[str, List[Repair]]):
+    with open(os.path.join(Path(__file__).parent , f"filtered_repair_data.json"), "w") as f:
+        json.dump(data, f)
+
+def save_data_to_file(data: Dict[str, List[Repair]], file_name: str):
     results = dict()
     for approach in data:
         tmp = set()
-        for repair in approach.repairs:
-            tmp.add((repair.question, repair.id, repair.seed))
+        for repair in data[approach]:
+            tmp.add((repair.approach, str(repair.question), str(repair.id), str(repair.time) ,str(repair.seed)))
         tmp_sorted = sorted(tmp)
-        results[approach.approach_name] = tmp_sorted
+        results[approach] = tmp_sorted
+    
+    with open(os.path.join(Path(__file__).parent , file_name), "w") as f:
+        json.dump(results, f)
+
+def save_repair_data(data: Dict[str, List[Repair]]):
+    results = dict()
+    for approach in data:
+        tmp = set()
+        for repair in data[approach]:
+            tmp.add((repair.approach, str(repair.question), str(repair.id), str(repair.time) ,str(repair.seed)))
+        tmp_sorted = sorted(tmp)
+        results[approach] = tmp_sorted
     
     with open(os.path.join(Path(__file__).parent , f"repair_data.json"), "w") as f:
         json.dump(results, f)
 
-def load_repair_data():
-    #TODO: save überarbeiten und load dann repairs erstellen lassen
+def load_repair_data() -> Dict[str, List[Repair]]:
+    with open(os.path.join(Path(__file__).parent , f"repair_data.json"), "w") as f:
+        jsn = json.load(f)
+
+    results = dict()
+    for approach in jsn:
+        tmp = list()
+        for entry in jsn[approach]:
+            tmp.add(Repair.fromTuple(entry))
+        results[approach] = tmp
+    
+    return results
+
+
+#TODO: save filter data in file
+#TODO: umstellen common repairs auf repairs und nicht tupeln. WIR WOLLEN IMMER MIT DER REPAIR KLASSE ARBEITEN
+#TODO: Könnte man schöner machen wie wenn schon mal gemacht dann mach es nicht nochmal (check ob die file existieren)
+def setup():
+    subject_data = create_subject_data(RESULTS)
+    repair_data = create_repair_data(subject_data)
+    filtered_repair_data = filter_out_already_working_subjects(repair_data)
+    save_filtered_data(filtered_repair_data)
+
+def rerun_gen_on_pykali_repairs():
+    file = os.path.join(RERUN_RESULTS, "gen_on_pykali.txt")
+    data = SubjectDataRerun(file)
+    print(data.generations)
+
+def rerun_gen_without_del():
     pass
 
-#TODO: common time für alle sieht komisch aus
-#TODO: repair data sollte ein dict sein mit key approach
+def create_rerun_kali_genprog_json():
+    subject_data = create_subject_data(RESULTS)
+    repair_data = create_repair_data(subject_data)
+    filtered_repair_data = filter_out_already_working_subjects(repair_data)
+    common_repairs = common_repairs_venn(filtered_repair_data)
+    results = {str(k):v for k,v in common_repairs.items() if k == ("PyKali",) or k == ("PyGenProg",) or k == ("PyKali", "PyGenProg")}
+    file_name = "rerun_kali_genprog.json"
+    with open(os.path.join(Path(__file__).parent , file_name), "w") as f:
+        json.dump(results, f)
+
 def main(args):
     #Subject Data
     subject_data = create_subject_data(RESULTS)
     repair_data = create_repair_data(subject_data)
-    filtered_repair_data = filter_out_already_working_subjects(repair_data)
-    save_repair_data(filtered_repair_data)
-    #plot_common_fixes_times(repair_data)
-    #common_repairs = common_repairs_venn(repair_data)
-    
-    #plot_common_fixes_times(filtered_repair_data)
-    #uniques = find_unique_repairs(repair_data)
-    #common_repairs = common_repairs_venn(filtered_repair_data)
-    #times = calculate_time_to_fix_on_common_repairs(repair_data)
-    #total_repairs = count_total_repairs(repair_data)
+    print(find_already_working_subjects(repair_data))
 
+    #rerun_gen_on_pykali_repairs()
+    
     #corrupted_data = find_corrupted_data(RESULTS)
     #with open("eval/corrupted_data.json", "w") as f:
         #json.dump(corrupted_data, f)

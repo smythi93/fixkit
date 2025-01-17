@@ -8,6 +8,7 @@ from fixkit.repair.pykali import PyKali
 from fixkit.repair.pymutrepair import PyMutRepair
 from fixkit.localization.coverage import CoverageLocalization
 from fixkit.genetic.minimize import DefaultMutationMinimizer
+from fixkit.logger import debug_logger
 
 import itertools
 import traceback
@@ -23,6 +24,7 @@ import json
 import fileinput
 import tempfile
 from contextlib import contextmanager
+import csv
 
 #Settings 
 WORKERS = 1
@@ -39,7 +41,7 @@ QUESTION_4 = REF_BENCHMARK / "question_4" #357
 QUESTION_5 = REF_BENCHMARK / "question_5" #108
 
 OUTPUT = Path(__file__).parent / "results"
-OUTPUT_RERUNS = Path(__file__).parent / "results_reruns"
+OUTPUT_RERUNS = Path("/vol/fob-vol5/nebenf22/werkkai/dev/fixkit/eval/results_reruns")
 REP = Path(__file__).parent / "rep"
 
 QUESTIONS = [QUESTION_1, QUESTION_2, QUESTION_3, QUESTION_4, QUESTION_5]
@@ -68,7 +70,7 @@ REP_SLURM = Path(__file__).parent / "rep"
 SEEDS_1 = [7133,883,6465,7235,3735,5197,2570,3405,2155,9753]
 SEEDS_2 = [8013,3798,5637,7770,6056,2419,6841,1343,6924,0]
 SEEDS_3 = [5416,6002,6862,5442,2971,1157,2225,1940,9408,6346]
-
+ALL_SEEDS = SEEDS_1 + SEEDS_2 + SEEDS_3
 APPROACHES = {
     "GENPROG": (
         PyGenProg,
@@ -107,7 +109,75 @@ APPROACHES = {
     #"AE": (PyAE, {"k": 1}),
 }
 
+GENPROG_RERUN = {
+    "GENPROG_10": (
+        PyGenProg,
+        {
+            "population_size": POPULATION_SIZE,
+            "max_generations": 10,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
+        },
+    ),
+    "GENPROG_30": (
+        PyGenProg,
+        {
+            "population_size": POPULATION_SIZE,
+            "max_generations": 30,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
+        },
+    ),
+    "GENPROG_50": (
+        PyGenProg,
+        {
+            "population_size": POPULATION_SIZE,
+            "max_generations": 50,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
+        },
+    ),
+}
+
 APPROACHES_FOR_CORRUPTED_DATA = {
+    "PyGenProg": (
+        PyGenProg,
+        {
+            "population_size": POPULATION_SIZE,
+            "max_generations": MAX_GENERATION,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
+        },
+    ),
+    "PyKali": (
+        PyKali,
+        {
+            "max_generations": 1,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
+        },
+    ),
+    "PyMutRepair": (
+        PyMutRepair,
+        {
+            "max_generations": 1,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
+        },
+    ),
+    "PyCardumen": (
+        PyCardumen,
+        {
+            "population_size": POPULATION_SIZE,
+            "max_generations": MAX_GENERATION,
+            "w_mut": W_MUT,
+            "workers": WORKERS,
+        },
+    ),
+    #"AE": (PyAE, {"k": 1}),
+}
+
+APPROACHES_FOR_REPAIR_DATA = {
     "PyGenProg": (
         PyGenProg,
         {
@@ -187,7 +257,7 @@ class EvalRunner:
         self.output_path = output_path
         self.seed = seed
         self.set_seed()
-        self.output_file = os.path.join(self.output_path, f"{approach.__name__}_{self.get_question()}_{self.seed}.txt")
+        self.output_file = os.path.join(self.output_path, f"{approach.__name__}_{self.get_question()}_{self.seed}.csv")
         #checkpoint where the evaluation stopped last time
         self.checkpoint = self.get_checkpoint(self.output_file)
         #Subjects are all the faulty programs for one question
@@ -315,8 +385,13 @@ class EvalRunner:
                         break        
 
                 
-                with open(self.output_file, "a") as f:
-                    f.write(f"{repair.__class__.__name__},{number}, Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
+                with open(self.output_file, "a", newline="") as f:
+                    csvwriter = csv.writer(f, delimiter=",", quotechar="|", quoting=csv.QUOTE_MINIMAL)
+                    fit_list = [float("{:.2f}".format(fit)) for fit in repair.fitness_tracking.values()]
+                    generations = len(fit_list)
+                    fill = [None] * MAX_GENERATION
+                    result = fit_list[:MAX_GENERATION] + fill[len(fit_list):]
+                    csvwriter.writerow([repair.__class__.__name__,number,found] + result + [generations, duration])
                 
             shutil.rmtree(REP, ignore_errors=True)
             
@@ -434,6 +509,120 @@ class EvalRunner:
             
         shutil.rmtree(REP, ignore_errors=True)
     
+    def single_rerun_diff_params(self, parameters: Dict, subject_number, question, generations,):
+        subject_path = self.input_path / subject_number
+        test_files = self.get_test_files(subject_path)
+        candidate_name = self.get_candidate_name(subject_path)
+        excludes = self.get_excludes(subject_path)
+
+        start = time.time()
+        try:
+            with time_limit(1800):
+                localization = CoverageLocalization(
+                    src=subject_path,
+                    timeout=60,
+                    cov=candidate_name,
+                    tests=test_files,
+                    metric="Ochiai",
+                    out=REP
+                )
+            
+                repair = self.approach.from_source(
+                    src=subject_path,
+                    excludes=excludes,
+                    localization=localization,
+                    out=REP,
+                    minimizer=DefaultMutationMinimizer(),
+                    **parameters
+                )
+            
+                patches = repair.repair()
+        except Exception as ep:
+                with open(self.output_file, "a") as f:
+                    f.write(f"{repair.__class__.__name__},{subject_number},{ep.__class__.__name__}\n")
+                
+                err_file = os.path.join(self.output_path, f"{repair.__class__.__name__}_err.txt")
+                with open(err_file, "a") as f:
+                    f.write(f"{repair.__class__.__name__},{self.get_question()},{subject_number},{self.seed},{ep.__class__.__name__}\n")
+                    traceback.TracebackException.from_exception(ep).print(file=f)
+
+        else:
+            duration = time.time() - start
+            found = False
+            #Wieso macht das meine "patches" kaputt
+            #engine = Tests4PyEngine(AbsoluteFitness(set(), set()), workers=32, out="rep")
+            #engine.evaluate(patches)
+            max_fitness = 0.0
+            for patch in patches:
+                if patch.fitness > max_fitness:
+                    max_fitness = patch.fitness
+                if almost_equal(patch.fitness, 1):
+                    found = True
+                    break        
+
+            output_file = os.path.join(OUTPUT_RERUNS, "gen_on_pykali.txt")
+            with open(output_file, "a") as f:
+                f.write(f"{repair.__class__.__name__},{question},{subject_number}, Generations: {generations}, Seed: {self.seed}, Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
+            
+        shutil.rmtree(REP, ignore_errors=True)
+    
+    def single_rerun_repair_data(self, parameters: Dict, subject_number, question):
+        subject_path = self.input_path / subject_number
+        test_files = self.get_test_files(subject_path)
+        candidate_name = self.get_candidate_name(subject_path)
+        excludes = self.get_excludes(subject_path)
+
+        start = time.time()
+        try:
+            with time_limit(1800):
+                localization = CoverageLocalization(
+                    src=subject_path,
+                    timeout=60,
+                    cov=candidate_name,
+                    tests=test_files,
+                    metric="Ochiai",
+                    out=REP
+                )
+            
+                repair = self.approach.from_source(
+                    src=subject_path,
+                    excludes=excludes,
+                    localization=localization,
+                    out=REP,
+                    minimizer=DefaultMutationMinimizer(),
+                    **parameters
+                )
+            
+                patches = repair.repair()
+        except Exception as ep:
+                with open(self.output_file, "a") as f:
+                    f.write(f"{repair.__class__.__name__},{subject_number},{ep.__class__.__name__}\n")
+                
+                err_file = os.path.join(self.output_path, f"{repair.__class__.__name__}_err.txt")
+                with open(err_file, "a") as f:
+                    f.write(f"{repair.__class__.__name__},{self.get_question()},{subject_number},{self.seed},{ep.__class__.__name__}\n")
+                    traceback.TracebackException.from_exception(ep).print(file=f)
+
+        else:
+            duration = time.time() - start
+            found = False
+            #Wieso macht das meine "patches" kaputt
+            #engine = Tests4PyEngine(AbsoluteFitness(set(), set()), workers=32, out="rep")
+            #engine.evaluate(patches)
+            max_fitness = 0.0
+            for patch in patches:
+                if patch.fitness > max_fitness:
+                    max_fitness = patch.fitness
+                if almost_equal(patch.fitness, 1):
+                    found = True
+                    break
+
+            output_file = os.path.join(OUTPUT_RERUNS, f"{repair.__class__.__name__}_rerun_repairs.txt")
+            with open(output_file, "a") as f:
+                f.write(f"{repair.__class__.__name__},{question},{subject_number}, Seed: {self.seed}, Found: {found}, Fitness: {max_fitness}, Duration: {duration} s\n")
+            
+        shutil.rmtree(REP, ignore_errors=True)
+    
     def evaluate_debug_slurm(self, parameters: Dict, subject_number):
         subject_path = self.input_path / subject_number
         test_files = self.get_test_files(subject_path)
@@ -526,6 +715,7 @@ def run_slurm_old(approach, parameters, question, seed):
 
 
 def debug_local(approach, parameters, question, subject_number, seed):
+    debug_logger()
     runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT, seed=seed)
     runner.evaluate_debug(parameters, subject_number)
 
@@ -543,14 +733,19 @@ def debug_slurm(approach, parameters, question, subject_number, seed):
 # AE
 
 def main(args):
-    debugging = False
-    local =  False
+    debugging = True
+    local =  True
     slurm = False
     slurm_old = False
     fix_corrupted = False
-    pykali_genprog = True
+    gen_without_delete = False
+    gen_on_pykali = False
+    repairs_again = False
+    gen_with_fitness = False
+    gen_with_exhaustive = False
 
-    if (pykali_genprog):
+
+    if (gen_without_delete):
         with open(os.path.join(Path(__file__).parent, "rerun_kali_genprog.json")) as f:
             reruns = json.load(f)
         reruns = reruns["PyKali_PyGenProg"]
@@ -562,14 +757,63 @@ def main(args):
             for seed in SEEDS_1:
                 runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT_RERUNS, seed=seed)
                 runner.single_rerun(parameters=parameters, subject_number=id)
-            print(q, id)
+    
+    if (gen_on_pykali):
+        with open(os.path.join(Path(__file__).parent, "rerun_kali_genprog.json")) as f:
+            reruns = json.load(f)
+        reruns = reruns["PyKali"]
 
+        for run in reruns:
+            q, id = run[0], str(run[1])
+            id = str(id).zfill(3)
+            question = QUESTIONS[q-1]
+            for approach in GENPROG_RERUN:
+                approach, parameters = GENPROG_RERUN[approach]
+                for seed in ALL_SEEDS:
+                    runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT_RERUNS, seed=seed)
+                    runner.single_rerun_diff_params(parameters=parameters, subject_number=id, generations=parameters["max_generations"], question=q)
+
+    #das wegen den zeiten schauen ob sich da was ändert von wegen der ausreißer
+    if (repairs_again):
+        with open(os.path.join(Path(__file__).parent, "repair_data.json")) as f:
+            repairs = json.load(f)
+        input_id = int(args[0])
+        approaches_names = ["PyGenProg", "PyKali", "PyMutRepair", "PyCardumen"]
+        approach = approaches_names[input_id]
+        for repair in repairs[approach]:
+            q, id, seed = int(repair[1]), repair[2], int(repair[4])
+            if approach == "PyCardumen" and q == 1 and int(id) <= 529:
+                continue
+            question = QUESTIONS[q-1]
+            approach_new, parameters = APPROACHES_FOR_REPAIR_DATA[approach]
+            runner = EvalRunner(approach=approach_new, input_path=question, output_path=OUTPUT_RERUNS, seed=seed)
+            id = str(id).zfill(3)
+            runner.single_rerun_repair_data(parameters=parameters, subject_number=id, question=q)
+                
+    #das um zu schauen wie sich die fitness entwickelt -> geht schon nach oben da wir nur die fittesten speicehrn
+    #die literatur sagt/ist der meinung das die fitness nicht so wichtig ist, 
+    # da schon oft in der ersten generation gefunden
+    # 1. schauen wie viele reperaturen nach 1. generation gefunden werden
+    # 2. schauen ob fitness stagniert 
+    # 3. ???
+    #nochmal überlegen wie man das zeigt (da)
+    if (gen_with_fitness):
+        approach, parameters = APPROACHES["GENPROG"]
+        input_id = int(args[0])
+        all_combinations = list(itertools.product(QUESTIONS, SEEDS_2))
+        question, seed = all_combinations[input_id]
+        runner = EvalRunner(approach=approach, input_path=question, output_path=OUTPUT_RERUNS, seed=seed)
+        runner.evaluate(parameters=parameters)
+
+    if (gen_with_exhaustive):
+        pass
 
     if(fix_corrupted):
         with open("corrupted_data.json") as f:
             data = json.load(f)
             data = [entry for entry in data if entry[2] != "TimeoutException" and entry[2] != "TimeoutExpired"]
             print(data)
+            
             for entry in data:
                 approach, parameters = APPROACHES_FOR_CORRUPTED_DATA[entry[0]]
                 question = QUESTIONS_SLURM[int(entry[3])-1]
@@ -579,7 +823,6 @@ def main(args):
                 debug_slurm(approach, parameters, question, subject_number, seed)
                 print(f"finished: {approach, question, subject_number, seed}")
 
-    
     if(slurm_old):
         input_id = int(args[0])
         approaches_names = ["GENPROG", "KALI", "MUTREPAIR", "CARDUMEN"]
@@ -587,29 +830,25 @@ def main(args):
         approach, parameters = APPROACHES[approaches_names[input_id%5]]
 
     if (slurm):
-        
-        #input_id = int(args[0])
-        #approaches_names = ["GENPROG", "KALI", "MUTREPAIR", "CARDUMEN"]
-        #all_combinations = list(itertools.product(approaches_names, QUESTIONS_SLURM, SEEDS_2))
-        #approach_name, question, seed = all_combinations[input_id]
-        #approach, parameters = APPROACHES[approach_name]
-        approach, parameters = APPROACHES["CARDUMEN"]
-        question = QUESTION_5_SLURM
-        seed = 8013
-        #nochmal schauen am anfang wurde einer doppelt ausgeführt!!
+        input_id = int(args[0])
+        approaches_names = ["GENPROG", "KALI", "MUTREPAIR", "CARDUMEN"]
+        all_combinations = list(itertools.product(approaches_names, QUESTIONS_SLURM, SEEDS_2))
+        approach_name, question, seed = all_combinations[input_id]
+        approach, parameters = APPROACHES[approach_name]
         run_slurm(approach, parameters, question, seed)
 
-    if (local):
-        approach, question = parse_args(args)
-        approach, parameters = approach
-        approach, parameters = APPROACHES["GENPROG"]
-        question = QUESTION_1
-        run_local(approach, parameters, question)
+    #if (local):
+     #   approach, question = parse_args(args)
+     #   approach, parameters = approach
+     #   approach, parameters = APPROACHES["GENPROG"]
+      #  question = QUESTION_1
+      #  run_local(approach, parameters, question)
     
     if (debugging and local):
         approach, parameters = APPROACHES["GENPROG"]
         subject_number = "434"
         seed = 0
+        question = QUESTION_1
         debug_local(approach, parameters, question, subject_number, seed)
 
 if __name__ == "__main__":

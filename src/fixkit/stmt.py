@@ -68,6 +68,7 @@ class StatementFinder(ast.NodeVisitor):
                 self._search_file(".")
             elif self.src.is_dir():
                 for directory, _, files in os.walk(self.src):
+                    files.sort()
                     if not any(fnmatch.fnmatch(directory, e) for e in self.excludes):
                         for file in files:
                             self._search_file(

@@ -171,9 +171,11 @@ class EvalRunner():
         shutil.rmtree(TMP, ignore_errors=True)
         shutil.rmtree(SFLKIT_EVENTS, ignore_errors=True)
 
+
+#TODO: neuer output folder nur für tests4py results
 def test():
     approach = APPROACHES["KALI"]
-    subject = SUBJECTS["MARKUP"][1]
+    subject = SUBJECTS["PYSNOOPER"][1]
     approach, parameters = approach
     runner = EvalRunner(subject=subject,approach=approach,seed=SEEDS_1[0],output_path=OUTPUT)
     runner.evaluate(parameters)
@@ -199,8 +201,8 @@ def cleanup():
     shutil.rmtree(SFLKIT_EVENTS, ignore_errors=True)
 
 def main(args):
-    #test()
-    complete_eval_run()
+    test()
+    #complete_eval_run()
     #cleanup()
 
 

@@ -164,3 +164,4 @@ sflkit_events/
 *.report.json
 tmp
 eval/results/
+eval/results_old/
