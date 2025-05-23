@@ -2,6 +2,7 @@ import os
 import re
 import traceback
 import csv
+import shutil
 
 from pathlib import Path
 from typing import List
@@ -11,7 +12,7 @@ from fixkit.localization.coverage import CoverageLocalization
 from fixkit.genetic.minimize import DefaultMutationMinimizer
 
 
-#Settings 
+#Settings
 WORKERS = 1
 MAX_GENERATION = 10
 POPULATION_SIZE = 40
@@ -25,7 +26,7 @@ def almost_equal(value, target, delta=0.0001):
 def get_test_files(tests_dir: Path) -> List[str]:
         files = os.listdir(tests_dir)
         test_pattern = re.compile(r'test_.*\.py')
-        test_files = [s for s in files if test_pattern.match(s)]
+        test_files = [f"tests/{s}" for s in files if test_pattern.match(s)]
 
         return test_files
 
@@ -39,14 +40,11 @@ if __name__ == "__main__":
         }
 
     subject_dir = Path(__file__).parent / "subject"
-    #tests_dir = Path("eval/salah/tests")
+    tests_dir = Path(__file__).parent / "subject" / "tests"
     results_dir = Path(__file__).parent / "results"
     
     candidate_name = "middle"
-    test_files = get_test_files(subject_dir)
-    print(subject_dir)
-    print(results_dir)
-    print(test_files)
+    test_files = get_test_files(tests_dir=tests_dir)
 
     try:
         localization = CoverageLocalization(
@@ -59,7 +57,7 @@ if __name__ == "__main__":
                         )
         repair = PyGenProg.from_source(
                             src=subject_dir,
-                            excludes=["test_middle.py"],
+                            excludes=None,
                             localization=localization,
                             out=REP,
                             minimizer=DefaultMutationMinimizer(),
@@ -68,6 +66,7 @@ if __name__ == "__main__":
         
         patches = repair.repair()
 
+    #Error Logging
     except Exception as ep:
         with open(os.path.join(results_dir, "exception.txt"), "a") as f:
             traceback.TracebackException.from_exception(ep).print(file=f)
@@ -81,12 +80,18 @@ if __name__ == "__main__":
             if almost_equal(patch.fitness, 1):
                 found = True
                 break
+
+        #Create Header for CSV if it does not exists
         if not os.path.exists(os.path.join(results_dir, f"{repair.__class__.__name__}.csv")):
             with open(os.path.join(results_dir, f"{repair.__class__.__name__}.csv"), "a") as f:
                 csvwriter = csv.writer(f, delimiter=",", quotechar="|", quoting=csv.QUOTE_MINIMAL)
                 csvwriter.writerow(["approach_name", "subject_name", "repair_found"])
 
+        #Reults Logging
         with open(os.path.join(results_dir, f"{repair.__class__.__name__}.csv"), "a") as f:
             csvwriter = csv.writer(f, delimiter=",", quotechar="|", quoting=csv.QUOTE_MINIMAL)
             csvwriter.writerow([repair.__class__.__name__,candidate_name,found])
+
+    #Cleanup after Repair
+    shutil.rmtree(REP, ignore_errors=True)
         
