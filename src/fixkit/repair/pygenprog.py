@@ -66,7 +66,7 @@ class PyGenProg(GeneticRepair):
             max_generations=max_generations,
             w_mut=w_mut,
             #Delete entfernt für reruns
-            operators=[Delete, InsertBoth, Replace],
+            operators=[InsertBoth, Replace, Delete],
             selection=selection or UniversalSelection(),
             crossover_operator=OnePointCrossover(),
             minimizer=minimizer or DDMutationMinimizer(),

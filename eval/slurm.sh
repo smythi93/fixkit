@@ -7,7 +7,7 @@
 #SBATCH --partition=std
 #SBATCH --nodelist=gruenau7,gruenau8
 #SBATCH --time=48:00:00
-#SBATCH --array=0-49  # Adjust this range based on the number of tasks
+#SBATCH --array=0-3  # Adjust this range based on the number of tasks
 #SBATCH --output=/vol/tmp/werkkai/slurm_logs/slurm_%A_%a.out
 #SBATCH --error=/vol/tmp/werkkai/slurm_errors/slurm_%A_%a.err
 

@@ -74,4 +74,5 @@ class ExhaustiveStrategy(SearchStrategy):
                             operator(location.identifier, self.choices)
                         )
                         population.append(new_candidate)
+        
         return population

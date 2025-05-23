@@ -88,13 +88,13 @@ def save_data(df, name):
 #test normalverteilung
 def test_shapiro(df: pd.DataFrame, col):
     sw_stat, sw_p = stats.shapiro(df[col])
-    print(sw_stat, sw_p)
+    print(col, sw_stat, sw_p)
 
 #test normalverteilung
 def test_ks(df:pd.DataFrame, col):
     mean, std = df[col].mean(), df[col].std(ddof=1)
     ks_stat, ks_p = stats.kstest(df[col], "norm", args=(mean, std))
-    print(ks_stat, ks_p)
+    print(col, ks_stat, ks_p)
 
 def test_anderson(df: pd.DataFrame, col):
     ad_result = stats.anderson(df[col], dist="norm")
@@ -112,23 +112,24 @@ df = pd.DataFrame(data)
 #59 überall abziehen
 filtered_df = df.map(lambda x: x-59)
 
-mean_and_shit(filtered_df)
+#mean_and_shit(filtered_df)
 #test_anderson(filtered_df, "PyGenProg")
 #test_anderson(filtered_df, "PyCardumen")
 #test_anderson(filtered_df, "PyKali")
 #test_anderson(filtered_df, "PyMutRepair")
 
-#test_shapiro(filtered_df, "PyGenProg")
-#test_shapiro(filtered_df, "PyCardumen")
-#test_shapiro(filtered_df, "PyKali")
-#test_shapiro(filtered_df, "PyMutRepair")
+test_ks(filtered_df, "PyGenProg")
+test_ks(filtered_df, "PyCardumen")
+test_ks(filtered_df, "PyKali")
+test_ks(filtered_df, "PyMutRepair")
 
-#test_ks(filtered_df, "PyGenProg")
-#test_ks(filtered_df, "PyCardumen")
-#test_ks(filtered_df, "PyKali")
-#test_ks(filtered_df, "PyMutRepair")
+test_shapiro(filtered_df, "PyGenProg")
+test_shapiro(filtered_df, "PyCardumen")
+test_shapiro(filtered_df, "PyKali")
+test_shapiro(filtered_df, "PyMutRepair")
 
 #anova_test(filtered_df)
+kruskal_wallis_test(filtered_df)
 #mean_and_shit(filtered_df)
 #posthoc_turkey_test(filtered_df)
-#posthoc_dunn_test(filtered_df)
+posthoc_dunn_test(filtered_df)

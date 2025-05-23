@@ -26,6 +26,23 @@ To install the latest version from the repository, use:
 pip install git+https://github.com/smythi93/fixkit.git
 ```
 
+### Development
+
+For development, we recommend using Fixkit inside a virtual environment (virtualenv).
+By doing the following steps in a standard shell (bash), one can install Fixkit:
+
+```
+git clone https://github.com/smythi93/fixkit.git
+cd fixkit/
+
+python3.11 -m venv venv
+source venv/bin/activate
+
+pip install --upgrade pip
+
+pip install -e .[dev]
+```
+
 ## Usage
 
 FixKit is a library and can be used directly in your Python code.

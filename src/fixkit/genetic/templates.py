@@ -42,7 +42,7 @@ class TemplateTransformer(ast.NodeTransformer):
         new_arg = self.mapping[node.arg]
         return ast.arg(arg=new_arg, annotation=node.annotation, type_comment=node.type_comment)
 
-class   Combination:
+class Combination:
     def __init__(self, items: Iterable):
         self.items = FrozenMultiset(items)
 

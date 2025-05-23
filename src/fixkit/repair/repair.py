@@ -5,9 +5,11 @@ The repair module provides the necessary tools to repair a fault.
 import abc
 import os
 import random
+import numpy as np
 from copy import deepcopy
 from pathlib import Path
 from typing import Collection, List, Type, Optional, Any
+
 
 from fixkit.candidate import Candidate, GeneticCandidate
 from fixkit.constants import DEFAULT_WORK_DIR, EPSILON
@@ -173,7 +175,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         self.minimizer.fitness = self.fitness
         self.line_mode = line_mode
         self.strategy = None
-        self.fitness_tracking = dict()
+        self.max_fitness_tracking = dict()
+        self.avrg_fitness_tracking = dict()
 
     def get_search_strategy(self) -> SearchStrategy:
         return EvolutionaryStrategy(
@@ -240,7 +243,8 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
                 LOGGER.info(f"Generation {gen + 1}/{self.max_generations}:")
                 self.iteration()
                 self.log_fitness()
-                self.fitness_tracking[gen+1] = max(c.fitness for c in self.population)
+                self.max_fitness_tracking[gen+1] = max(c.fitness for c in self.population)
+                self.avrg_fitness_tracking[gen+1] = np.mean([c.fitness for c in self.population])
                 if self.abort():
                     LOGGER.info("Found a repair for the fault.")
                     break
@@ -259,7 +263,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
             fitness = 0
         LOGGER.info("The best candidate has a fitness of %.2f.", fitness)
         self.population = [c for c in self.population if c.fitness == fitness]
-        self.population = self.filter_population(self.population)
+        #self.population = self.filter_population(self.population)
         LOGGER.info("Minimize the best candidates.")
         self.population = self.minimizer.minimize(self.population)
         LOGGER.info("Found %d possible repairs.", len(self.population))
@@ -290,6 +294,7 @@ class GeneticRepair(LocalizationRepair, abc.ABC):
         """
         self.population = self.prepare_population(self.population)
         self.population = self.strategy.search(self.population)
+        self.pop_size_track = len(self.population)
         # Evaluate the fitness for the population.
         LOGGER.info("Evaluate the fitness for the population.")
         self.fitness.evaluate(self.population)
